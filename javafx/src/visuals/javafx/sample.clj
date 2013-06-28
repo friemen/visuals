@@ -1,11 +1,8 @@
 (ns visuals.javafx.sample
-  "Sample program"
-  (:import [javafx.scene Scene Group Node]
-           [javafx.scene.shape Circle])  
+  "Sample program"  
   (:require [visuals.javafx.toolkit :as tk]
             [visuals.forml :as f]
-            [visuals.core :as v]
-            [metam.core :as m]))
+            [visuals.core :as v]))
 
 
 (v/init-toolkit! (tk/->JfxToolkit))

@@ -4,6 +4,7 @@ GUI library based on reactor, metam and JavaFX.
 
 Currently this is purely experimental stuff!
 
+See the [sample](javafx/src/visuals/javafx/sample.clj) to get a first idea.
 
 ## License
 
