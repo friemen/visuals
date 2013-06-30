@@ -97,6 +97,8 @@
 (defmethod build :visuals.forml/button
   [spec]
   (doto (make Button spec)
+    (set-signals! "disabled" "focused" "text")
+    (set-eventsources! "OnAction")
     (.setText (:text spec))))
 
 

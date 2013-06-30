@@ -8,15 +8,6 @@
   (run-later* [tk f]))
 
 
-(defprotocol VisualComponent
-  (compname [vc])
-  (comptype [vc])
-  (parent [vc])
-  (children [vc])
-  (eventsources [vc])
-  (signals [vc]))
-
-
 (defn invoke
   ([instance methodname]
      (invoke instance methodname nil []))
