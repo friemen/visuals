@@ -9,13 +9,13 @@ See the [sample](javafx/src/visuals/javafx/sample.clj) to get a first idea.
 
 ## Ingredients of advanced GUI
 
- - Reactive core (*reactor*)
- - Capable UI toolkit and set of widgets (*JavaFX*)
- - Data Validation (*examine*, not yet used)
- - Declarative UI form specification (visuals.forml ns, based on *metam*)
- - Form builder for supported toolkits (visuals.javafx.builder ns)
- - Formatting/parsing of data (currently missing)
- - Mapping of domain data to/from signals (part of visuals.core ns)
+ - Reactive core ([reactor](https://github.com/friemen/reactor))
+ - Capable UI toolkit and set of widgets (currently only *JavaFX*)
+ - Data Validation ([examine](https://github.com/friemen/examine), not yet used)
+ - Declarative UI form specification (visuals.forml namespace, based on [metam](https://github.com/friemen/metam))
+ - Form builder for supported toolkits (visuals.javafx.builder nampespace)
+ - Formatting/parsing of data (not yet implemented)
+ - Mapping of domain data to/from signals (part of visuals.core namespace)
 
  
 ## License

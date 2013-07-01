@@ -15,7 +15,7 @@
                 (f/textfield "Street")
                 (f/textfield "Zipcode")
                 (f/textfield "City")
-                (f/button "B" :text "OK" :lyhint "skip")]))
+                (f/button "Ok" :text "OK" :lyhint "skip")]))
 
 (def w (f/window "HelloWorld" :content p))
 
@@ -25,11 +25,26 @@
               :zipcode ["Zipcode" :text]
               :city    ["City" :text]})
 
+
+(defn ^{:action ["Ok" :OnAction]} ok
+  [state]
+  (assoc-in state [:city] "DUCKBERG"))
+
+
+(defn start-view!
+  []
+  (let [stage (-> w v/build v/show!)]
+    (v/link-events! stage 'visuals.javafx.sample mapping)))
+
+
 ;; To actually see something happen, enter in a REPL (without #_):
 
-#_(def s (v/run-now (-> w v/build v/show!)))
+#_(def s (v/run-now (start-view!)))
 
 #_(v/to-components! mapping (v/cmap s) {:name "Donald Duck"
                                         :street "Upperstr. 15"
                                         :zipcode "12345"
                                         :city "Duckberg"})
+
+
+

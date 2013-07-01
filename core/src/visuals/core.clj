@@ -100,3 +100,40 @@
               (assoc-in accu data-path value))
             data
             sig-values)))
+
+
+(defn link-event!
+  "Adds f as reaction to the visual components eventsource.
+   The function f is invoked with the state that the mapping creates from the signals
+   of visual components.
+   The result of f is set as new state into the visual components signals."
+  [vc f mapping [comp-path evtsource-key]]
+  (let [evtsource (-> vc cmap (cget comp-path) eventsources evtsource-key)]
+    (->> evtsource
+         (r/react-with (fn [occ]
+                         (let [comp-map (cmap vc)]
+                           (->> {}
+                                (from-components mapping comp-map)
+                                f
+                                (to-components! mapping comp-map))))))
+    evtsource))
+
+
+(defn- action-meta
+  [var]
+  (when-let [a (-> var meta :action)]
+    (vector (var-get var) a)))
+
+
+(defn link-events!
+  "Links all functions from the ns namespace that have :action metadata
+   to the event sources of the visual components of vc."
+  [vc ns mapping]
+  (doseq [[f evtsource-path] (->> ns
+                                  ns-map
+                                  vals
+                                  (filter action-meta)
+                                  (map action-meta))]
+    (link-event! vc f mapping evtsource-path))
+  vc)
+
