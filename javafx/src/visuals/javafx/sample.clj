@@ -9,13 +9,12 @@
 (v/init-toolkit! (tk/->JfxToolkit))
 
 
-(def p (f/panel "P" :lygeneral "wrap 2"
-                :components [
-                (f/textfield "Name")
-                (f/textfield "Street")
-                (f/textfield "Zipcode")
-                (f/textfield "City")
-                (f/button "Ok" :text "OK" :lyhint "skip")]))
+(def p (f/panel "P" :lygeneral "wrap 2" :components [
+            (f/textfield "Name")
+            (f/textfield "Street")
+            (f/textfield "Zipcode")
+            (f/textfield "City")
+            (f/button "Ok" :text "OK" :lyhint "skip")]))
 
 (def w (f/window "HelloWorld" :content p))
 
@@ -27,24 +26,27 @@
 
 
 (defn ^{:action ["Ok" :OnAction]} ok
-  [state]
-  (assoc-in state [:city] "DUCKBERG"))
+  [view]
+  (assoc-in view [::v/domain-data :city] "DUCKBERG"))
 
 
 (defn start-view!
   []
-  (let [stage (-> w v/build v/show!)]
-    (v/link-events! stage 'visuals.javafx.sample mapping)))
+  (let [v (v/view w
+                  mapping
+                  {}
+                  (v/action-fns 'visuals.javafx.sample)
+                  {:name "Donald Duck"
+                   :street "Upperstr. 15"
+                   :zipcode "12345"
+                   :city "Duckberg"}
+                  {})]
+    (v/show! v)))
 
 
 ;; To actually see something happen, enter in a REPL (without #_):
 
 #_(def s (v/run-now (start-view!)))
-
-#_(v/to-components! mapping (v/cmap s) {:name "Donald Duck"
-                                        :street "Upperstr. 15"
-                                        :zipcode "12345"
-                                        :city "Duckberg"})
 
 
 

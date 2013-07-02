@@ -13,7 +13,6 @@
   (signals [vc]))
 
 
-
 (defonce ^:private toolkit nil)
 
 (defn init-toolkit!
@@ -43,17 +42,24 @@
   [spec]
   (build* toolkit spec))
 
+
 (defn show!
-  [vc]
-  (show!* toolkit vc)
-  vc)
+  "Makes the visual component of the view v visible."
+  [v]
+  (show!* toolkit (::vc v))
+  v)
+
 
 (defn hide!
-  [vc]
-  (hide!* toolkit vc)
-  vc)
+  "Makes the visual component of the view v invisible."
+  [v]
+  (hide!* toolkit (::vc v))
+  v)
+
 
 (defn cmap
+  "Returns a map of component path to visual component by recursively
+   visiting the tree of visual components."
   [vc]
   (let [walk (fn walk [prefix vc]
                (let [p (conj prefix (compname vc))]
@@ -61,7 +67,12 @@
                          (->> vc children (mapcat (partial walk p))))))]
     (->> vc (walk []) (into {}))))
 
+
 (defn cget
+  "Returns the visual component specified by the component path.
+   The comp-path can either be a vector (denoting the full path) or
+   the last part of the full path (usually a string denoting the compname
+   of the visual component."
   [comp-map comp-path]
   (if (vector? comp-path)
     (get comp-map comp-path)
@@ -77,6 +88,7 @@
   [x]
   (if (vector? x) x (if (coll? x) (vec x) (vector x))))
 
+
 (defn- sigget
   [comp-map comp-path signal-key]
   (-> comp-map (cget comp-path) signals signal-key))
@@ -88,6 +100,7 @@
   (doseq [[data-path [comp-path signal-key]] (seq mapping)]
     (r/setv! (sigget comp-map comp-path signal-key)
              (get-in data (as-vector data-path)))))
+
 
 (defn from-components
   "Associates the values of the signals contained in comp-map into the given
@@ -102,38 +115,94 @@
             sig-values)))
 
 
+(defn update-from-view
+  "Returns an update version of v where domain data and ui state are
+   update from the current values of the visual components."
+  [v]
+  (let [vc (::vc v)]
+    (-> v
+        (assoc ::comp-map (cmap vc))
+        (assoc ::domain-data (from-components (::domain-data-mapping v)
+                                              (::comp-map v)
+                                              (::domain-data v)))
+        (assoc ::ui-state (from-components (::ui-state-mapping v)
+                                           (::comp-map v)
+                                           (::ui-state v))))))
+
+
+(defn update-to-view!
+  "Writes the domain data and ui state into the visual components signals."
+  [v]
+  (let [{vc ::vc comp-map ::comp-map} v]
+    (to-components! (::domain-data-mapping v)
+                    comp-map
+                    (::domain-data v))
+    (to-components! (::ui-state-mapping v)
+                    comp-map
+                    (::ui-state v))))
+
+
 (defn link-event!
   "Adds f as reaction to the visual components eventsource.
    The function f is invoked with the state that the mapping creates from the signals
    of visual components.
    The result of f is set as new state into the visual components signals."
-  [vc f mapping [comp-path evtsource-key]]
-  (let [evtsource (-> vc cmap (cget comp-path) eventsources evtsource-key)]
+  [v f [comp-path evtsource-key]]
+  (let [{vc ::vc
+         domaindata-mapping ::domain-data-mapping
+         uistate-mapping ::ui-state-mapping} v
+        evtsource (-> vc cmap (cget comp-path) eventsources evtsource-key)]
     (->> evtsource
          (r/react-with (fn [occ]
-                         (let [comp-map (cmap vc)]
-                           (->> {}
-                                (from-components mapping comp-map)
-                                f
-                                (to-components! mapping comp-map))))))
+                         (->> v
+                              update-from-view
+                              f
+                              update-to-view!))))
     evtsource))
+
+
+(defn link-events!
+  "Subscribes all functions from the evtsource-fns map to the event sources in v."
+  [v evtsource-fns]
+  (doseq [[evtsource-path f] evtsource-fns]
+    (link-event! v f evtsource-path))
+  v)
+
+
+(defn view
+  "Creates a view that represents the visual components,
+   the domain data and ui state."
+  ([spec domaindata-mapping uistate-mapping action-fn-map]
+     (view spec domaindata-mapping uistate-mapping action-fn-map {} {}))
+  ([spec domaindata-mapping uistate-mapping action-fn-map domain-data ui-state]
+     (let [vc (build spec)
+           comp-map (cmap vc)
+           v {::vc vc
+              ::comp-map comp-map
+              ::domain-data domain-data
+              ::domain-data-mapping domaindata-mapping
+              ::ui-state ui-state
+              ::ui-state-mapping uistate-mapping}]
+       (link-events! v action-fn-map)
+       (update-to-view! v)
+       v)))
 
 
 (defn- action-meta
   [var]
   (when-let [a (-> var meta :action)]
-    (vector (var-get var) a)))
+    (vector a (var-get var))))
 
 
-(defn link-events!
-  "Links all functions from the ns namespace that have :action metadata
-   to the event sources of the visual components of vc."
-  [vc ns mapping]
-  (doseq [[f evtsource-path] (->> ns
-                                  ns-map
-                                  vals
-                                  (filter action-meta)
-                                  (map action-meta))]
-    (link-event! vc f mapping evtsource-path))
-  vc)
+(defn action-fns
+  "Returns a map of eventsource paths to functions within the namespace ns
+   that have meta data :action attached."
+  [ns]
+  (->> ns
+       ns-map
+       vals
+       (filter action-meta)
+       (map action-meta)
+       (into {})))
+
 
