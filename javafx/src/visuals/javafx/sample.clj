@@ -32,16 +32,16 @@
 
 (defn start-view!
   []
-  (let [v (v/view w
-                  mapping
-                  {}
-                  (v/action-fns 'visuals.javafx.sample)
-                  {:name "Donald Duck"
-                   :street "Upperstr. 15"
-                   :zipcode "12345"
-                   :city "Duckberg"}
-                  {})]
-    (v/show! v)))
+  (-> w
+      v/view
+      (assoc ::v/domain-data-mapping mapping
+             ::v/domain-data {:name "Donald Duck"
+                              :street "Upperstr. 15"
+                              :zipcode "12345"
+                              :city "Duckberg"}
+             ::v/action-fns (v/action-fns 'visuals.javafx.sample))
+      v/start!
+      v/show!))
 
 
 ;; To actually see something happen, enter in a REPL (without #_):

@@ -139,7 +139,8 @@
                     (::domain-data v))
     (to-components! (::ui-state-mapping v)
                     comp-map
-                    (::ui-state v))))
+                    (::ui-state v))
+    v))
 
 
 (defn link-event!
@@ -170,24 +171,33 @@
 
 
 (defn view
-  "Creates a view that represents the visual components,
-   the domain data and ui state."
-  ([spec domaindata-mapping uistate-mapping action-fn-map]
-     (view spec domaindata-mapping uistate-mapping action-fn-map {} {}))
-  ([spec domaindata-mapping uistate-mapping action-fn-map domain-data ui-state]
-     (let [vc (build spec)
-           comp-map (cmap vc)
-           v {::vc vc
-              ::comp-map comp-map
-              ::domain-data domain-data
-              ::domain-data-mapping domaindata-mapping
-              ::ui-state ui-state
-              ::ui-state-mapping uistate-mapping}]
-       (link-events! v action-fn-map)
-       (update-to-view! v)
-       v)))
+  "Creates a new view that represents the visual components,
+   the domain data, ui state, validation results etc.
+   The actual building and linking step is done via (start! v)."
+  [spec]
+  {::spec spec                        ; model of the form
+   ::vc nil                           ; root component of the built visual component tree
+   ::comp-map {}                      ; corresponding map of visual components
+   ::domain-data {}                   ; business domain data
+   ::domain-data-mapping {}           ; mapping between signals and business domain data
+   ::ui-state {}                      ; relevant components ui state (enabled, editable, visible and others)
+   ::ui-state-mapping {}              ; mapping between signals and ui state data
+   ::action-fns {}                    ; mapping of eventsource paths to action functions
+   ::validation-rule-set {}           ; rule set for validation
+   ::validation-results (atom {})})   ; current validation results
 
 
+(defn start!
+  "Builds and connects all parts of a view."
+  [v]
+  (let [vc (build (::spec v))]
+    (-> v
+        (assoc ::vc vc
+               ::comp-map (cmap vc))
+        (link-events! (::action-fns v))
+        update-to-view!)))
+
+  
 (defn- action-meta
   [var]
   (when-let [a (-> var meta :action)]
