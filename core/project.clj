@@ -5,4 +5,5 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [metam/core "1.0.2"]
+                 [examine "1.0.0"]
                  [reactor "0.1.0-SNAPSHOT"]])

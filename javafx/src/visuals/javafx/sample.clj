@@ -3,7 +3,9 @@
   (:require [visuals.javafx.toolkit :as tk]
             [visuals.forml :as f]
             [visuals.core :as v]
-            [reactor.core :as r]))
+            [reactor.core :as r]
+            [examine.core :as e]
+            [examine.constraints :as c]))
 
 
 (v/init-toolkit! (tk/->JfxToolkit))
@@ -33,20 +35,24 @@
 (defn start-view!
   []
   (-> w
-      v/view
-      (assoc ::v/domain-data-mapping mapping
-             ::v/domain-data {:name "Donald Duck"
-                              :street "Upperstr. 15"
-                              :zipcode "12345"
-                              :city "Duckberg"}
-             ::v/action-fns (v/action-fns 'visuals.javafx.sample))
+      v/view-signal
+      (v/update! ::v/domain-data-mapping mapping
+                 ::v/domain-data {:name "Donald Duck"
+                                  :street "Upperstr. 15"
+                                  :zipcode "12345"
+                                  :city "Duckberg"}
+                 ::v/validation-rule-set (e/rule-set :name c/required (c/min-length 3)) 
+                 ::v/action-fns (v/action-fns 'visuals.javafx.sample))
       v/start!
       v/show!))
 
 
+;; TODO
+;; add validation display
+
 ;; To actually see something happen, enter in a REPL (without #_):
 
-#_(def s (v/run-now (start-view!)))
+#_(def v (v/run-now (start-view!)))
 
 
 

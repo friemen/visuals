@@ -1,6 +1,7 @@
 (ns visuals.core
   "Visuals API"
-  (:require [reactor.core :as r])
+  (:require [reactor.core :as r]
+            [examine.core :as e])
   (:use [visuals.utils]))
 
 
@@ -45,16 +46,16 @@
 
 (defn show!
   "Makes the visual component of the view v visible."
-  [v]
-  (show!* toolkit (::vc v))
-  v)
+  [view-sig]
+  (show!* toolkit (-> view-sig r/getv ::vc))
+  view-sig)
 
 
 (defn hide!
   "Makes the visual component of the view v invisible."
-  [v]
-  (hide!* toolkit (::vc v))
-  v)
+  [view-sig]
+  (hide!* toolkit (-> view-sig r/getv ::vc))
+  view-sig)
 
 
 (defn cmap
@@ -115,87 +116,127 @@
             sig-values)))
 
 
-(defn update-from-view
-  "Returns an update version of v where domain data and ui state are
+(defn update!
+  "Updates the view-map within the view-signal by assoc'ing the given
+   key-value-pairs."
+  [view-sig & kvs]
+  (r/setv! view-sig (apply assoc (conj kvs (r/getv view-sig))))
+  view-sig)
+
+
+(defn update-from-view!
+  "Returns an updated version of view-map where domain data and ui state are
    update from the current values of the visual components."
-  [v]
-  (let [vc (::vc v)]
-    (-> v
-        (assoc ::comp-map (cmap vc))
-        (assoc ::domain-data (from-components (::domain-data-mapping v)
-                                              (::comp-map v)
-                                              (::domain-data v)))
-        (assoc ::ui-state (from-components (::ui-state-mapping v)
-                                           (::comp-map v)
-                                           (::ui-state v))))))
+  [view-sig]
+  (let [view-map (r/getv view-sig)
+        vc (::vc view-map)]
+    (r/setv! view-sig
+             (-> view-map
+                 (assoc ::comp-map (cmap vc))
+                 (assoc ::domain-data (from-components (::domain-data-mapping view-map)
+                                                       (::comp-map view-map)
+                                                       (::domain-data view-map)))
+                 (assoc ::ui-state (from-components (::ui-state-mapping view-map)
+                                                    (::comp-map view-map)
+                                                    (::ui-state view-map))))))
+  view-sig)
 
 
 (defn update-to-view!
-  "Writes the domain data and ui state into the visual components signals."
-  [v]
-  (let [{vc ::vc comp-map ::comp-map} v]
-    (to-components! (::domain-data-mapping v)
+  "Writes the domain data and ui state from the view-map into the visual
+   components signals."
+  [view-sig]
+  (let [view-map (r/getv view-sig)
+        {vc ::vc comp-map ::comp-map} view-map]
+    (to-components! (::domain-data-mapping view-map)
                     comp-map
-                    (::domain-data v))
-    (to-components! (::ui-state-mapping v)
+                    (::domain-data view-map))
+    (to-components! (::ui-state-mapping view-map)
                     comp-map
-                    (::ui-state v))
-    v))
+                    (::ui-state view-map))
+    view-sig))
 
 
-(defn link-event!
+(defn- link-event!
   "Adds f as reaction to the visual components eventsource.
-   The function f is invoked with the state that the mapping creates from the signals
-   of visual components.
+   The function f is invoked with the state that the mapping creates from
+   the signals of visual components.
    The result of f is set as new state into the visual components signals."
-  [v f [comp-path evtsource-key]]
+  [view-sig f [comp-path evtsource-key]]
   (let [{vc ::vc
          domaindata-mapping ::domain-data-mapping
-         uistate-mapping ::ui-state-mapping} v
+         uistate-mapping ::ui-state-mapping} (r/getv view-sig)
         evtsource (-> vc cmap (cget comp-path) eventsources evtsource-key)]
-    (->> evtsource
-         (r/react-with (fn [occ]
-                         (->> v
-                              update-from-view
-                              f
-                              update-to-view!))))
+    (->> evtsource (r/react-with (fn [occ]
+                                   (->> view-sig
+                                        update-from-view!
+                                        r/getv
+                                        f
+                                        (r/setv! view-sig))
+                                   (update-to-view! view-sig))))
     evtsource))
 
 
-(defn link-events!
+(defn- link-events!
   "Subscribes all functions from the evtsource-fns map to the event sources in v."
-  [v evtsource-fns]
-  (doseq [[evtsource-path f] evtsource-fns]
-    (link-event! v f evtsource-path))
-  v)
+  [view-sig]
+  (doseq [[evtsource-path f] (-> view-sig r/getv ::action-fns)]
+    (link-event! view-sig f evtsource-path))
+  view-sig)
 
 
-(defn view
+(defn- validate!
+  [view-sig data-path]
+  (update-from-view! view-sig)
+  (let [{current-results ::validation-results
+         rule-set ::validation-rule-set
+         domain-data ::domain-data} (r/getv view-sig)
+         new-results (e/validate (e/sub-set rule-set data-path) domain-data)]
+    (update! view-sig ::validation-results (e/update current-results new-results))
+    (println (e/messages new-results))
+    view-sig))
+
+
+(defn- install-validation!
+  [view-sig]
+  (let [{mapping ::domain-data-mapping
+         comp-map ::comp-map} (r/getv view-sig)]
+    (doseq [[data-path [comp-path signal-key]] (seq mapping)]
+      (let [sig (sigget comp-map comp-path signal-key)]
+        (->> sig (r/process-with (fn [v]
+                                   (println "Examining" data-path v)
+                                   (validate! view-sig data-path)))))))
+  view-sig)
+
+
+(defn view-signal
   "Creates a new view that represents the visual components,
    the domain data, ui state, validation results etc.
    The actual building and linking step is done via (start! v)."
   [spec]
-  {::spec spec                        ; model of the form
-   ::vc nil                           ; root component of the built visual component tree
-   ::comp-map {}                      ; corresponding map of visual components
-   ::domain-data {}                   ; business domain data
-   ::domain-data-mapping {}           ; mapping between signals and business domain data
-   ::ui-state {}                      ; relevant components ui state (enabled, editable, visible and others)
-   ::ui-state-mapping {}              ; mapping between signals and ui state data
-   ::action-fns {}                    ; mapping of eventsource paths to action functions
-   ::validation-rule-set {}           ; rule set for validation
-   ::validation-results (atom {})})   ; current validation results
+  (r/signal
+   {::spec spec                        ; model of the form
+    ::vc nil                           ; root component of the built visual component tree
+    ::comp-map {}                      ; corresponding map of visual components
+    ::domain-data {}                   ; business domain data
+    ::domain-data-mapping {}           ; mapping between signals and business domain data
+    ::ui-state {}                      ; relevant components ui state (enabled, editable, visible and others)
+    ::ui-state-mapping {}              ; mapping between signals and ui state data
+    ::action-fns {}                    ; mapping of eventsource paths to action functions
+    ::validation-rule-set {}           ; rule set for validation
+    ::validation-results {}}))         ; current validation results
 
 
 (defn start!
   "Builds and connects all parts of a view."
-  [v]
-  (let [vc (build (::spec v))]
-    (-> v
-        (assoc ::vc vc
-               ::comp-map (cmap vc))
-        (link-events! (::action-fns v))
-        update-to-view!)))
+  [view-sig]
+  (let [vc (build (-> view-sig r/getv ::spec))]
+    (-> view-sig
+        (update! ::vc vc
+                 ::comp-map (cmap vc))
+        link-events!
+        update-to-view!
+        install-validation!)))
 
   
 (defn- action-meta
@@ -214,5 +255,6 @@
        (filter action-meta)
        (map action-meta)
        (into {})))
+
 
 
