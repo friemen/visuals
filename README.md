@@ -11,15 +11,15 @@ See the [sample](javafx/src/visuals/javafx/sample.clj) to get a first idea.
 
  - Reactive core ([reactor](https://github.com/friemen/reactor))
  - Capable UI toolkit and set of widgets (currently only *JavaFX*)
- - Data Validation ([examine](https://github.com/friemen/examine), not yet used)
+ - Data Validation ([examine](https://github.com/friemen/examine))
  - Declarative UI form specification (visuals.forml namespace, based on [metam](https://github.com/friemen/metam))
  - Form builder for supported toolkits (visuals.javafx.builder nampespace)
  - Formatting/parsing of data (not yet implemented)
- - Mapping of domain data to/from signals (part of visuals.core namespace)
+ - Mapping of domain data to/from signals (part of visuals.core namespace, uses [parsargs](https://github.com/friemen/parsargs))
 
  
 ## License
 
-Copyright © 2013 F.Riemenschneider
+Copyright 2013 F.Riemenschneider
 
 Distributed under the Eclipse Public License, the same as Clojure.

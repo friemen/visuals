@@ -1,7 +1,8 @@
 (ns visuals.core
   "Visuals API"
   (:require [reactor.core :as r]
-            [examine.core :as e])
+            [examine.core :as e]
+            [parsargs.core :as p])
   (:use [visuals.utils]))
 
 
@@ -98,18 +99,27 @@
 (defn to-components!
   "Merges the given data into the signals contained in comp-map."
   [mapping comp-map data]
-  (doseq [[data-path [comp-path signal-key]] (seq mapping)]
+  (doseq [{format :formatter
+           data-path :data-path
+           [comp-path signal-key] :signal-path} mapping]
     (r/setv! (sigget comp-map comp-path signal-key)
-             (get-in data (as-vector data-path)))))
+             (->> data-path
+                  as-vector
+                  (get-in data)
+                  format))))
 
 
 (defn from-components
   "Associates the values of the signals contained in comp-map into the given
    map."
   [mapping comp-map data]
-  (let [sig-values (for [[data-path [comp-path signal-key]] (seq mapping)]
+  (let [sig-values (for [{parse :parser
+                          data-path :data-path
+                          [comp-path signal-key] :signal-path} mapping]
                      (vector (as-vector data-path)
-                               (r/getv (sigget comp-map comp-path signal-key))))]
+                             (->> (sigget comp-map comp-path signal-key)
+                                  r/getv
+                                  parse)))]
     (reduce (fn [accu [data-path value]]
               (assoc-in accu data-path value))
             data
@@ -163,9 +173,7 @@
    the signals of visual components.
    The result of f is set as new state into the visual components signals."
   [view-sig f [comp-path evtsource-key]]
-  (let [{vc ::vc
-         domaindata-mapping ::domain-data-mapping
-         uistate-mapping ::ui-state-mapping} (r/getv view-sig)
+  (let [vc (-> view-sig r/getv ::vc)
         evtsource (-> vc cmap (cget comp-path) eventsources evtsource-key)]
     (->> evtsource (r/react-with (fn [occ]
                                    (->> view-sig
@@ -201,7 +209,8 @@
   [view-sig]
   (let [{mapping ::domain-data-mapping
          comp-map ::comp-map} (r/getv view-sig)]
-    (doseq [[data-path [comp-path signal-key]] (seq mapping)]
+    (doseq [{data-path :data-path
+             [comp-path signal-key] :signal-path} mapping]
       (let [sig (sigget comp-map comp-path signal-key)]
         (->> sig (r/process-with (fn [v]
                                    (println "Examining" data-path v)
@@ -219,9 +228,9 @@
     ::vc nil                           ; root component of the built visual component tree
     ::comp-map {}                      ; corresponding map of visual components
     ::domain-data {}                   ; business domain data
-    ::domain-data-mapping {}           ; mapping between signals and business domain data
+    ::domain-data-mapping []           ; mapping between signals and business domain data
     ::ui-state {}                      ; relevant components ui state (enabled, editable, visible and others)
-    ::ui-state-mapping {}              ; mapping between signals and ui state data
+    ::ui-state-mapping []              ; mapping between signals and ui state data
     ::action-fns {}                    ; mapping of eventsource paths to action functions
     ::validation-rule-set {}           ; rule set for validation
     ::validation-results {}}))         ; current validation results
@@ -257,4 +266,13 @@
        (into {})))
 
 
+(def ^:private mapping-parser
+  (p/some
+   (p/sequence :data-path (p/alternative (p/value keyword?) (p/value vector?))
+               :signal-path (p/value vector?)
+               :formatter (p/optval fn? str)
+               :parser (p/optval fn? identity))))
 
+(defn mapping
+  [& args]
+  (p/parse mapping-parser args))

@@ -21,10 +21,11 @@
 (def w (f/window "HelloWorld" :content p))
 
 
-(def mapping {:name    ["Name" :text]
-              :street  ["Street" :text]
-              :zipcode ["Zipcode" :text]
-              :city    ["City" :text]})
+(def domain-mapping
+  (v/mapping :name    ["Name" :text]
+             :street  ["Street" :text]
+             :zipcode ["Zipcode" :text]
+             :city    ["City" :text]))
 
 
 (defn ^{:action ["Ok" :OnAction]} ok
@@ -36,7 +37,7 @@
   []
   (-> w
       v/view-signal
-      (v/update! ::v/domain-data-mapping mapping
+      (v/update! ::v/domain-data-mapping domain-mapping
                  ::v/domain-data {:name "Donald Duck"
                                   :street "Upperstr. 15"
                                   :zipcode "12345"
