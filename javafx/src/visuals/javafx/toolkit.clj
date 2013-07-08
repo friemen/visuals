@@ -23,11 +23,13 @@
     (Platform/runLater f)))
 
 
+
 (extend-type Node
   VisualComponent
   (compname [vc] (.getId vc))
   (comptype [vc] (-> vc (getp :spec) m/metatype))
   (parent [vc] (.getParent vc))
+  (set-error! [vc on] (.setStyle vc (if on "-fx-border-color: red;" "-fx-border-color: white;")))
   (children [vc] (if (instance? MigPane vc) (or (.getChildren vc) []) []))
   (eventsources [vc] (getp vc :eventsources))
   (signals [vc] (getp vc :signals)))
@@ -38,6 +40,7 @@
   (compname [vc] (-> vc (getp :spec) :name))
   (comptype [vc] (-> vc (getp :spec) m/metatype))
   (parent [vc] (.getOwner vc))
+  (set-error! [vc on] on)
   (children [vc] [(-> vc .getScene .getRoot)])
   (eventsources [vc] (getp vc :eventsources))
   (signals [vc] (getp vc :signals)))

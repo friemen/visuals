@@ -10,6 +10,7 @@
   (compname [vc])
   (comptype [vc])
   (parent [vc])
+  (set-error! [vc on])
   (children [vc])
   (eventsources [vc])
   (signals [vc]))
@@ -193,15 +194,31 @@
   view-sig)
 
 
+(defn- components-with-invalid-data
+  "Returns a set of all visual components that contain invalid data."
+  [view-sig]
+  (let [{vrs ::validation-results
+         comp-map ::comp-map
+         mapping ::domain-data-mapping} (r/getv view-sig)
+         msgs (e/messages vrs)]
+    (->> mapping
+         (filter #(msgs (:data-path %)))
+         (map #(cget comp-map (-> % :signal-path first)))
+         set)))
+
+
 (defn- validate!
   [view-sig data-path]
   (update-from-view! view-sig)
   (let [{current-results ::validation-results
          rule-set ::validation-rule-set
-         domain-data ::domain-data} (r/getv view-sig)
+         domain-data ::domain-data
+         comp-map ::comp-map} (r/getv view-sig)
          new-results (e/validate (e/sub-set rule-set data-path) domain-data)]
     (update! view-sig ::validation-results (e/update current-results new-results))
-    (println (e/messages new-results))
+    (let [invalid-vcs (components-with-invalid-data view-sig)]
+      (doseq [[comp-path vc] comp-map]
+        (set-error! vc (invalid-vcs vc))))
     view-sig))
 
 
@@ -213,7 +230,6 @@
              [comp-path signal-key] :signal-path} mapping]
       (let [sig (sigget comp-map comp-path signal-key)]
         (->> sig (r/process-with (fn [v]
-                                   (println "Examining" data-path v)
                                    (validate! view-sig data-path)))))))
   view-sig)
 

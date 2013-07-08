@@ -49,7 +49,7 @@
 
 
 ;; TODO
-;; add validation display
+;; make validation display nicer
 
 ;; To actually see something happen, enter in a REPL (without #_):
 
