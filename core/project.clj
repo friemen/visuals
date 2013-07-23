@@ -7,4 +7,5 @@
                  [metam/core "1.0.2"]
                  [examine "1.0.0"]
                  [parsargs "1.0.0"]
-                 [reactor "0.1.0-SNAPSHOT"]])
+                 [reactor "0.1.0-SNAPSHOT"]
+                 [clj-time "0.5.0"]])
