@@ -110,6 +110,11 @@
                   format))))
 
 
+(defn- text-or-value
+  [parser-fn s]
+  (try (parser-fn s) (catch Exception ex s)))
+
+
 (defn from-components
   "Associates the values of the signals contained in comp-map into the given
    map."
@@ -120,7 +125,7 @@
                      (vector (as-vector data-path)
                              (->> (sigget comp-map comp-path signal-key)
                                   r/getv
-                                  parse)))]
+                                  (text-or-value parse))))]
     (reduce (fn [accu [data-path value]]
               (assoc-in accu data-path value))
             data
@@ -137,7 +142,7 @@
 
 (defn update-from-view!
   "Returns an updated version of view-map where domain data and ui state are
-   update from the current values of the visual components."
+   updated from the current values of the visual components."
   [view-sig]
   (let [view-map (r/getv view-sig)
         vc (::vc view-map)]

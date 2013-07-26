@@ -19,8 +19,10 @@
   ([precision n]
      (format-number (Locale/getDefault) precision n))
   ([locale precision n]
-     (let [df (DecimalFormat. (number-pattern precision) (DecimalFormatSymbols. locale))]
-       (.format df n))))
+     (if n
+       (let [df (DecimalFormat. (number-pattern precision) (DecimalFormatSymbols. locale))]
+         (.format df n))
+       "")))
 
 
 (defn parse-number
@@ -40,11 +42,15 @@
   ([d]
      (format-date "dd.MM.yyyy" d))
   ([pattern d]
-  (tf/unparse (tf/formatter pattern) d)))
+  (if d
+    (tf/unparse (tf/formatter pattern) d)
+    "")))
 
 
 (defn parse-date
   ([text]
      (parse-date "dd.MM.yyyy" text))
   ([pattern text]
-     (tf/parse (tf/formatter pattern) text)))
+     (if (clojure.string/blank? text)
+       nil
+       (tf/parse (tf/formatter pattern) text))))

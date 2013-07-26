@@ -3,9 +3,16 @@
   (:require [visuals.javafx.toolkit :as tk]
             [visuals.forml :as f]
             [visuals.core :as v]
+            [visuals.parsform :as pf]
+            [clj-time.core :as t]
             [reactor.core :as r]
             [examine.core :as e]
             [examine.constraints :as c]))
+
+
+;; To actually see something happen, enter in a REPL (without #_):
+
+#_(def v (v/run-now (start-view!)))
 
 
 (v/init-toolkit! (tk/->JfxToolkit))
@@ -16,6 +23,7 @@
             (f/textfield "Street")
             (f/textfield "Zipcode")
             (f/textfield "City")
+            (f/textfield "Age")
             (f/button "Ok" :text "OK" :lyhint "skip")]))
 
 (def w (f/window "HelloWorld" :content p))
@@ -25,7 +33,13 @@
   (v/mapping :name    ["Name" :text]
              :street  ["Street" :text]
              :zipcode ["Zipcode" :text]
-             :city    ["City" :text]))
+             :city    ["City" :text]
+             :age     ["Age" :text]  pf/format-date pf/parse-date))
+
+
+(def validation-rules
+  (e/rule-set :name c/required (c/min-length 3)
+              :age c/not-blank? c/is-date))
 
 
 (defn ^{:action ["Ok" :OnAction]} ok
@@ -42,7 +56,7 @@
                                   :street "Upperstr. 15"
                                   :zipcode "12345"
                                   :city "Duckberg"}
-                 ::v/validation-rule-set (e/rule-set :name c/required (c/min-length 3)) 
+                 ::v/validation-rule-set validation-rules 
                  ::v/action-fns (v/action-fns 'visuals.javafx.sample))
       v/start!
       v/show!))
@@ -51,9 +65,6 @@
 ;; TODO
 ;; make validation display nicer
 
-;; To actually see something happen, enter in a REPL (without #_):
-
-#_(def v (v/run-now (start-view!)))
 
 
 

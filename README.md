@@ -16,10 +16,6 @@ See the [sample](javafx/src/visuals/javafx/sample.clj) to get a first idea.
  - Form builder for supported toolkits (see visuals.javafx.builder nampespace)
  - Formatting/parsing of data (see visuals.parsform namespace)
  - Mapping of domain data to/from signals (part of visuals.core namespace, uses [parsargs](https://github.com/friemen/parsargs))
-
-## TODOs
-
- - Integrate Parsers/Formatters into data-signal mapper
  
 ## License
 
