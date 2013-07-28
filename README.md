@@ -33,13 +33,14 @@ characteristics that programming has to offer:
    with code that accesses UI. This forces you to employ UI robots and to maintain 
    brittle test scripts.
 
-To cut it short: there quite some challenges ahead. This library explores practical
-solutions.
+To cut it short: there are quite some challenges ahead. This library explores practical
+answers to the following questions.
 
  - Where does functional reactive programming help?
- - Avoid callback hell.
+ - Can we really escape callback hell?
  - To what extent can side effects be avoided?
-
+ - How does a concise textual specification of UI look like?
+ 
 
 ## Some of the next TODOs
 
