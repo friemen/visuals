@@ -3,65 +3,96 @@
   (:require [reactor.core :as react])
   (:use [visuals.utils]))
 
-(defrecord PropertyBasedSignal [propname property clmap-atom]
-  
+(defrecord PropertyBasedSignal [propname property clmap-atom] 
   reactor.core/Reactive
-  
   (subscribe
     [sig f followers]
     (let [l (reify javafx.beans.value.ChangeListener
                     (changed [_ subject old new] (f new)))]
       (swap! clmap-atom #(assoc % f [l followers]))
       (.addListener property l)))
-  
   (unsubscribe
     [sig f]
     (when-let [[l followers] (get @clmap-atom f)]
       (swap! clmap-atom #(dissoc % f))
       (.removeListener property l)))
-  
   (followers
     [sig]
     (->> clmap-atom deref vals second (apply concat)))
-  
   (role
     [sig]
     propname)
-  
   reactor.core/Signal
-  
   (getv
     [sig]
     (.getValue property))
-  
   (setv!
     [sig value]
-    (.setValue property value) value))
+    (.setValue property value)
+    value))
+
+
+(defrecord ObservableListBasedSignal [propname olist clmap-atom]
+  reactor.core/Reactive
+  (subscribe
+    [sig f followers]
+    (let [l (reify javafx.collections.ListChangeListener
+              (onChanged [_ evt] (f (.getList evt))))]
+      (swap! clmap-atom #(assoc % f [l followers]))
+      (.addListener olist l)))
+  (unsubscribe
+    [sig f]
+    (when-let [[l followers] (get @clmap-atom f)]
+      (swap! clmap-atom #(dissoc % f))
+      (.removeListener olist l)))
+  (followers
+    [sig]
+    (->> clmap-atom deref vals second (apply concat)))
+  (role
+    [sig]
+    propname)
+  reactor.core/Signal
+  (getv
+    [sig]
+    (into [] olist))
+  (setv!
+    [sig value]
+    (.setAll olist (cast java.util.Collection value))
+    value))
 
 
 (defn for-props
   [component factory-fn propnames]
   (->> propnames
-       (map #(vector (keyword %) (factory-fn component %)))
+       (map (partial factory-fn component))
+       (map #(vector (react/role %) %))
+       #_(map #(vector (keyword %) (factory-fn component %)))
        (into {})))
 
-
+;;TODO refactor
 (defn prop-signal
   [component propname]
-  (let [prop (invoke component (str propname "Property"))] 
-    (PropertyBasedSignal. (keyword propname) prop (atom {}))))
+  (if (.endsWith propname "[]")
+    (let [propname-without-brackets (.substring propname 0 (- (count propname) 2))
+          getter (str "get" (first-upper propname-without-brackets))
+          olist (invoke component getter)]
+      (ObservableListBasedSignal. (keyword (first-lower propname-without-brackets)) olist (atom {})))
+    (let [prop (invoke component (str (first-lower propname) "Property"))] 
+      (PropertyBasedSignal. (keyword (first-lower propname)) prop (atom {})))))
 
 
 (defn comp-eventsource
   [component propname]
-  (if-let [eh (invoke component (str "get" propname))]
+  (if-let [eh (invoke component (str "get" (first-upper propname)))]
     (if (satisfies? reactor.core.EventSource eh)
       eh
       (throw (IllegalStateException. (str "Event handler already bound for " propname ": " eh))))
-    (let [newes (react/eventsource (keyword propname))
+    (let [newes (react/eventsource (keyword (first-lower propname)))
           eh (reify javafx.event.EventHandler
                (handle [_ evt]
                  (react/raise-event! newes evt)))]
-      (invoke component (str "set" propname) [javafx.event.EventHandler] [eh])
+      (invoke component (str "set" (first-upper propname)) [javafx.event.EventHandler] [eh])
       newes)))
+
+
 

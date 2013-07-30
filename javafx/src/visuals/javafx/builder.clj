@@ -2,8 +2,9 @@
   "JavaFX UI Builder"
   (:require [visuals.forml :as f]
             [metam.core :as m])
-  (:use [visuals.javafx reactor utils])
-  (:import [javafx.scene.control Button Label TableView TableColumn TextField]
+  (:use [visuals.javafx reactor utils]
+        [visuals.utils :only [first-upper]])
+  (:import [javafx.scene.control Button ChoiceBox Label TableView TableColumn TextField]
            [javafx.scene Scene]
            [javafx.stage Stage]
            [visuals.javafx.reactor PropertyBasedSignal]
@@ -49,6 +50,7 @@
 (defn- set-eventsources!
   [component & propnames]
   (->> propnames
+       #_(map first-upper)
        (for-props component comp-eventsource)
        (putp! component :eventsources)))
 
@@ -76,6 +78,26 @@
   (throw (IllegalArgumentException. (str "Cannot build type " (m/metatype spec)))))
 
 
+(defmethod build :visuals.forml/button
+  [spec]
+  (doto (make Button spec)
+    (set-signals! "disabled" "focused" "text")
+    (set-eventsources! "onAction")
+    (.setText (:text spec))))
+
+
+(defmethod build :visuals.forml/dropdownlist
+  [spec]
+  (doto (make ChoiceBox spec)
+    (set-signals! "disabled" "focused" "items[]" "value")))
+
+
+(defmethod build :visuals.forml/label
+  [spec]
+  (doto (make Label spec)
+    (.setText (:text spec))))
+
+
 (defmethod build :visuals.forml/panel
   [spec]
   (make-panel spec))
@@ -85,21 +107,7 @@
   [spec]
   (doto (make TextField spec)
     (set-signals! "disabled" "focused" "text" "editable")
-    (set-eventsources! "OnAction")))
-
-
-(defmethod build :visuals.forml/label
-  [spec]
-  (doto (make Label spec)
-    (.setText (:text spec))))
-
-
-(defmethod build :visuals.forml/button
-  [spec]
-  (doto (make Button spec)
-    (set-signals! "disabled" "focused" "text")
-    (set-eventsources! "OnAction")
-    (.setText (:text spec))))
+    (set-eventsources! "onAction")))
 
 
 (defmethod build :visuals.forml/window
@@ -115,5 +123,5 @@
       (.setTitle (:title spec))
       (putp! :spec spec)
       (set-signals! "title")
-      (set-eventsources! "OnCloseRequest"))))
+      (set-eventsources! "onCloseRequest"))))
 

@@ -291,7 +291,7 @@
   (p/some
    (p/sequence :data-path (p/alternative (p/value keyword?) (p/value vector?))
                :signal-path (p/value vector?)
-               :formatter (p/optval fn? str)
+               :formatter (p/optval fn? identity)
                :parser (p/optval fn? identity))))
 
 (defn mapping

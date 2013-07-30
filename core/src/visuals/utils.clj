@@ -1,5 +1,6 @@
 (ns visuals.utils
-  "Abstractions and common, toolkit-independent, internal functions")
+  "Abstractions and common, toolkit-independent, internal functions"
+  (:require [clojure.string :as s]))
 
 (defprotocol Toolkit
   (build* [tk spec])
@@ -17,3 +18,16 @@
          (.getMethod methodname (into-array java.lang.Class parameter-types))
          (.invoke instance (object-array parameter-values)))))
 
+
+(defn first-upper
+  [s]
+  (if (s/blank? s)
+    ""
+    (apply str (s/upper-case (first s)) (rest s))))
+
+
+(defn first-lower
+  [s]
+  (if (s/blank? s)
+    ""
+    (apply str (s/lower-case (first s)) (rest s))))

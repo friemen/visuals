@@ -26,7 +26,7 @@
 (def p (f/panel "P" :lygeneral "wrap 2" :components [
             (f/textfield "Name")
             (f/textfield "Street")
-            (f/textfield "Zipcode")
+            (f/dropdownlist "Zipcode")
             (f/textfield "City")
             (f/textfield "Birthday")
             (f/button "Ok" :text "OK" :lyhint "skip")]))
@@ -39,11 +39,12 @@
 (def domain-mapping
   (v/mapping :name    ["Name" :text]
              :street  ["Street" :text]
-             :zipcode ["Zipcode" :text]
+             :zipcode ["Zipcode" :value]
              :city    ["City" :text]
              :age     ["Birthday" :text]  pf/format-date pf/parse-date))
 
-
+(def ui-mapping
+  (v/mapping :zipcodes ["Zipcode" :items]))
 
 ;; Validation rules for domain data
 
@@ -54,7 +55,7 @@
 
 ;; Action functions
 
-(defn ^{:action ["Ok" :OnAction]} ok
+(defn ^{:action ["Ok" :onAction]} ok
   [view]
   (assoc-in view [::v/domain-data :city] "DUCKBERG"))
 
@@ -68,8 +69,10 @@
       (v/update! ::v/domain-data-mapping domain-mapping
                  ::v/domain-data {:name "Donald Duck"
                                   :street "Upperstr. 15"
-                                  :zipcode "12345"
+                                  :zipcode "4711"
                                   :city "Duckberg"}
+                 ::v/ui-state-mapping ui-mapping
+                 ::v/ui-state {:zipcodes ["12345" "53113" "4711"]}
                  ::v/validation-rule-set validation-rules 
                  ::v/action-fns (v/action-fns 'visuals.javafx.sample))
       v/start!
