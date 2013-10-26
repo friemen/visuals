@@ -1,9 +1,12 @@
 (ns visuals.core
   "Visuals API"
   (:require [reactor.core :as r]
+            [reactor.execution]
+            [metam.core]
+            [visuals.forml]
             [examine.core :as e]
-            [parsargs.core :as p])
-  (:use [visuals.utils]))
+            [parsargs.core :as p]
+            [visuals.utils :refer :all]))
 
 
 (defprotocol VisualComponent
@@ -40,6 +43,10 @@
   [& forms]
   `(run-now* (fn [] ~@forms)))
 
+
+(def ui-thread (reify reactor.execution.Executor
+                 (schedule [_ f] (visuals.utils/run-later* (var-get #'toolkit) f))
+                 (cancel [_] false)))
 
 (defn build
   [spec]
@@ -93,8 +100,21 @@
 
 
 (defn- sigget
+  "Returns the signal specified by comp-path and signal-key within the comp-map."
   [comp-map comp-path signal-key]
   (-> comp-map (cget comp-path) signals signal-key))
+
+
+(defn signal
+  "Returns the signal denoted by signal-key of the visual component that comp-path points to."
+  [view-sig comp-path signal-key]
+  (-> view-sig r/getv ::comp-map (sigget comp-path signal-key)))
+
+
+(defn eventsource
+  "Returns the eventsource denoted by evtsrc-key of the visual component that comp-path points to."
+  [view-sig comp-path evtsrc-key]
+  (-> view-sig r/getv ::comp-map (cget comp-path) eventsources evtsrc-key))
 
 
 (defn to-components!
@@ -117,7 +137,7 @@
 
 (defn from-components
   "Associates the values of the signals contained in comp-map into the given
-   map."
+   data map."
   [mapping comp-map data]
   (let [sig-values (for [{parse :parser
                           data-path :data-path
@@ -173,29 +193,29 @@
     view-sig))
 
 
-(defn- link-event!
-  "Adds f as reaction to the visual components eventsource.
-   The function f is invoked with the state that the mapping creates from
-   the signals of visual components.
-   The result of f is set as new state into the visual components signals."
-  [view-sig f [comp-path evtsource-key]]
+(defn set-action!
+  "Sets f as reaction to the visual components eventsource.
+   The function f is invoked with current view state as single argument.
+   The result of f is set as new view state into the view-sig."
+  [view-sig f comp-path evtsource-key]
   (let [vc (-> view-sig r/getv ::vc)
         evtsource (-> vc cmap (cget comp-path) eventsources evtsource-key)]
+    (r/unsubscribe evtsource nil) ; remove all existing actions
     (->> evtsource (r/react-with (fn [occ]
-                                   (->> view-sig
-                                        update-from-view!
-                                        r/getv
-                                        f
-                                        (r/setv! view-sig))
+                                   (some->> view-sig
+                                            update-from-view!
+                                            r/getv
+                                            f
+                                            (r/setv! view-sig))
                                    (update-to-view! view-sig))))
     evtsource))
 
 
-(defn- link-events!
+(defn- connect-actions-to-eventsources!
   "Subscribes all functions from the evtsource-fns map to the event sources in v."
   [view-sig]
-  (doseq [[evtsource-path f] (-> view-sig r/getv ::action-fns)]
-    (link-event! view-sig f evtsource-path))
+  (doseq [[[comp-path evtsource-key] f] (-> view-sig r/getv ::action-fns)]
+    (set-action! view-sig f comp-path evtsource-key))
   view-sig)
 
 
@@ -264,11 +284,20 @@
     (-> view-sig
         (update! ::vc vc
                  ::comp-map (cmap vc))
-        link-events!
+        connect-actions-to-eventsources!
         update-to-view!
         install-validation!)))
 
-  
+(defn preview
+  "Builds and displays the specification of visual components.
+   Intended for use in REPL for rapid prototyping."
+  [spec]
+  (let [window-spec (if (metam.core/metatype? :visuals.forml/window spec)
+                      spec
+                      (visuals.forml/window (str "Preview: " (:name spec)) :content spec))]
+    (-> window-spec view-signal start! show! run-now)))
+
+
 (defn- action-meta
   [var]
   (when-let [a (-> var meta :action)]

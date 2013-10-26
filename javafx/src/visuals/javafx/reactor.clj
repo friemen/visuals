@@ -1,7 +1,8 @@
 (ns visuals.javafx.reactor
   "JavaFX reactive implementations"
-  (:require [reactor.core :as react])
-  (:use [visuals.utils]))
+  (:require [reactor.core :as react]
+            [visuals.core :as v]
+            [visuals.utils :refer :all]))
 
 (defrecord PropertyBasedSignal [propname property clmap-atom] 
   reactor.core/Reactive
@@ -62,6 +63,8 @@
 
 
 (defn for-props
+  "Returns a map property name to signal or eventsource (depends on the factory-fn) for
+   all propnames and the given visual component."
   [component factory-fn propnames]
   (->> propnames
        (map (partial factory-fn component))
@@ -71,6 +74,8 @@
 
 ;;TODO refactor
 (defn prop-signal
+  "Creates a signal for a property of a component. If the propname ends with [] a
+   collection instead of a property is assumed."
   [component propname]
   (if (.endsWith propname "[]")
     (let [propname-without-brackets (.substring propname 0 (- (count propname) 2))
@@ -82,17 +87,18 @@
 
 
 (defn comp-eventsource
+  "Creates an eventsource that is filled by an event handler implementation. The
+   event handler is registered with the given visual component."
   [component propname]
   (if-let [eh (invoke component (str "get" (first-upper propname)))]
     (if (satisfies? reactor.core.EventSource eh)
       eh
       (throw (IllegalStateException. (str "Event handler already bound for " propname ": " eh))))
-    (let [newes (react/eventsource (keyword (first-lower propname)))
+    (let [newes (react/eventsource (keyword (first-lower propname)) v/ui-thread)
           eh (reify javafx.event.EventHandler
                (handle [_ evt]
-                 (react/raise-event! newes evt)))]
+                 (dump "event raised" (react/raise-event! newes evt))))]
       (invoke component (str "set" (first-upper propname)) [javafx.event.EventHandler] [eh])
       newes)))
-
 
 

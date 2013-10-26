@@ -5,4 +5,4 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[visuals/core "0.1.0-SNAPSHOT"]
                  [com.miglayout/miglayout-javafx "4.2"]
-                 [local/JavaFX "2.2"]])
+                 [com.oracle.javafx/javafx "2.2.25"]])

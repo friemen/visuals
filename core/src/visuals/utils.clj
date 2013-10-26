@@ -31,3 +31,9 @@
   (if (s/blank? s)
     ""
     (apply str (s/lower-case (first s)) (rest s))))
+
+
+(defn dump
+  [mark v]
+  (println "DEBUG" mark v)
+  v)

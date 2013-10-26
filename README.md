@@ -18,7 +18,7 @@ See the [sample](javafx/src/visuals/javafx/sample.clj) to get a first idea.
  - Mapping of domain data to/from signals (part of visuals.core namespace, uses [parsargs](https://github.com/friemen/parsargs))
 
 
-## Some ideas and questions that visuals explores
+## Motivation
 
 The interesting thing about rich clients is that they combine some of the nastiest
 characteristics that programming has to offer:
@@ -28,13 +28,13 @@ characteristics that programming has to offer:
    the time-consuming use of point-and-click designer tools).
  - Every piece of logic is triggered on the basis of callbacks.
  - Actions that change UI must do so by causing side effects. 
- - To make an UI responsive you have to deal with multi-threading.
+ - To make a UI responsive you have to deal with multi-threading.
  - Testing presentation logic is often very hard if it's mixed up
    with code that accesses UI. This forces you to employ UI robots and to maintain 
    brittle test scripts.
 
-To cut it short: there are quite some challenges ahead. This library explores practical
-answers to the following questions.
+To cut it short, there are quite some challenges ahead. This library explores practical
+answers to the following questions:
 
  - Where does functional reactive programming help?
  - Can we really escape callback hell?
@@ -42,13 +42,16 @@ answers to the following questions.
  - How does a concise textual specification of UI look like?
  
 
-## Some of the next TODOs
+## Next todos
 
- - Make validation error display nicer.
- - Add list based components: dropdownlist, combobox, listbox
+ - Expose change to domain data as merged event source.
+ - Expose explicit user action as event merged event source.
+ - Automatic rule execution on change of business data.
+ - Add list based components: combobox, listbox
  - Open other window (modal and non-modal), but keep side effect out of action
  - Add table
  - Add tree
+ - Make validation error display nicer.
 
 
 ## License

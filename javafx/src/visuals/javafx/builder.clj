@@ -41,6 +41,7 @@
 
 
 (defn- set-signals!
+  "Installs a map with all signals into the custom properties of a visual component."
   [component & propnames]
   (->> propnames
        (for-props component prop-signal)
@@ -48,9 +49,9 @@
 
 
 (defn- set-eventsources!
+  "Installs a map with all eventsources into the custom properties of a visual component."
   [component & propnames]
   (->> propnames
-       #_(map first-upper)
        (for-props component comp-eventsource)
        (putp! component :eventsources)))
 

@@ -10,10 +10,43 @@
             [examine.constraints :as c]))
 
 
-;; To actually see something happen, enter in a REPL (without #_):
+;; Try in the REPL
 
-#_(use 'visuals.javafx.sample)
-#_(def v (visuals.core/run-now (start-view!)))
+
+#_(require '[visuals.javafx.sample :as s]
+           '[visuals.core :as v]
+           '[reactor.core :as r]
+           '[visuals.forml :as f])
+
+;; Define and start view as defined below.
+#_(def view-sig (v/run-now (s/start-view!)))
+;; The var view-sig holds the immutable map that represents a View.
+
+
+;; Get value from UI
+#_(-> view-sig (v/signal "City" :text) r/getv)
+
+
+;; Set value into UI
+#_(-> view-sig (v/signal "City" :text) (r/setv! "BAZ"))
+
+
+;; Get event source and trigger an event
+#_(-> view-sig (v/eventsource "Ok" :onAction) (r/raise-event! nil))
+
+
+;; Define and show panel
+#_(def vs (v/preview (f/panel "Project" :components [
+                          (f/textfield "Name")
+                          (f/button "Press me")])))
+
+
+;; Add action method to :onAction eventsource of a button
+#_(v/set-action! vs (fn [view]
+                      (println (::v/domain-data view)))
+                 "Press me"
+                 :onAction)
+
 
 
 ;; Configure to use JavaFX toolkit
@@ -57,6 +90,7 @@
 
 (defn ^{:action ["Ok" :onAction]} ok
   [view]
+  (println "OK action with domain data" (::v/domain-data view))
   (assoc-in view [::v/domain-data :city] "DUCKBERG"))
 
 
