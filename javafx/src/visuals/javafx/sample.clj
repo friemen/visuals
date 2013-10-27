@@ -12,7 +12,6 @@
 
 ;; Try in the REPL
 
-
 #_(require '[visuals.javafx.sample :as s]
            '[visuals.core :as v]
            '[reactor.core :as r]
@@ -36,15 +35,19 @@
 
 
 ;; Define and show panel
-#_(def vs (v/preview (f/panel "Project" :components [
-                          (f/textfield "Name")
-                          (f/button "Press me")])))
+#_(def vs (v/preview
+           (f/panel "Listbox" :lygeneral "flowy" :components [
+               (f/list "Items")
+               (f/button "Add Item")])))
+
+;; Add mapping from listbox items to ::v/ui-state
+#_(-> vs (v/update! ::v/ui-state-mapping (v/mapping :items ["Items" :items])))
 
 
 ;; Add action method to :onAction eventsource of a button
 #_(v/set-action! vs (fn [view]
-                      (println (::v/domain-data view)))
-                 "Press me"
+                      (update-in view [::v/ui-state :items] #(conj % "NEW")))
+                 "Add Item"
                  :onAction)
 
 
@@ -111,9 +114,3 @@
                  ::v/action-fns (v/action-fns 'visuals.javafx.sample))
       v/start!
       v/show!))
-
-
-
-
-
-

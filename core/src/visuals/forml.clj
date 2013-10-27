@@ -1,5 +1,6 @@
 (ns visuals.forml
-  (:use [metam.core]))
+  (:refer-clojure :exclude [list])
+  (:require [metam.core :refer :all]))
 
 (declare default-value)
 

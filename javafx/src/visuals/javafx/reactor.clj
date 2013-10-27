@@ -58,7 +58,7 @@
     (into [] olist))
   (setv!
     [sig value]
-    (into-list! olist value)
+    (v/run-later (into-list! olist value))
     value))
 
 
@@ -87,7 +87,7 @@
     (into [] (.getSelectedIndices selmodel)))
   (setv!
     [sig value]
-    (.selectIndices selmodel (int (first value)) (int-array (rest value)))
+    (v/run-later (.selectIndices selmodel (int (first value)) (int-array (rest value))))
     value))
 
 

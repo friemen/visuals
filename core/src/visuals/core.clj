@@ -19,7 +19,7 @@
   (signals [vc]))
 
 
-(defonce ^:private toolkit nil)
+(defonce toolkit nil)
 
 (defn init-toolkit!
   [tk]
@@ -81,8 +81,8 @@
 (defn cget
   "Returns the visual component specified by the component path.
    The comp-path can either be a vector (denoting the full path) or
-   the last part of the full path (usually a string denoting the compname
-   of the visual component."
+   the last part of the full path (usually a string denoting the
+   component name of the visual component."
   [comp-map comp-path]
   (if (vector? comp-path)
     (get comp-map comp-path)
