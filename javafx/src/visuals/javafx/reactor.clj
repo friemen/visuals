@@ -9,7 +9,7 @@
   (subscribe
     [sig f followers]
     (let [l (reify javafx.beans.value.ChangeListener
-                    (changed [_ subject old new] (f new)))]
+              (changed [_ subject old new] (f new)))]
       (swap! clmap-atom #(assoc % f [l followers]))
       (.addListener property l)))
   (unsubscribe
@@ -62,17 +62,47 @@
     value))
 
 
+(defrecord SelectionModelBasedSignal [propname selmodel clmap-atom]
+  reactor.core/Reactive
+  (subscribe
+    [sig f followers]
+    (let [l (reify javafx.collections.ListChangeListener
+              (onChanged [_ evt] (f (.getList evt))))]
+      (swap! clmap-atom #(assoc % f [l followers]))
+      (.addListener (.getSelectedIndices selmodel) l)))
+  (unsubscribe
+    [sig f]
+    (when-let [[l followers] (get @clmap-atom f)]
+      (swap! clmap-atom #(dissoc % f))
+      (.removeListener (.getSelectedIndices selmodel) l)))
+  (followers
+    [sig]
+    (->> clmap-atom deref vals second (apply concat)))
+  (role
+    [sig]
+    propname)
+  reactor.core/Signal
+  (getv
+    [sig]
+    (into [] (.getSelectedIndices selmodel)))
+  (setv!
+    [sig value]
+    (.selectIndices selmodel (int (first value)) (int-array (rest value)))
+    value))
+
+
 (defn for-props
-  "Returns a map property name to signal or eventsource (depends on the factory-fn) for
+  "Returns a map property name to signal or eventsource (depends on the factory-fn, see below) for
    all propnames and the given visual component."
   [component factory-fn propnames]
   (->> propnames
        (map (partial factory-fn component))
        (map #(vector (react/role %) %))
-       #_(map #(vector (keyword %) (factory-fn component %)))
        (into {})))
 
-;;TODO refactor
+
+;; Factory functions for event sources and signals
+
 (defn prop-signal
   "Creates a signal for a property of a component. If the propname ends with [] a
    collection instead of a property is assumed."
@@ -81,9 +111,21 @@
     (let [propname-without-brackets (.substring propname 0 (- (count propname) 2))
           getter (str "get" (first-upper propname-without-brackets))
           olist (invoke component getter)]
-      (ObservableListBasedSignal. (keyword (first-lower propname-without-brackets)) olist (atom {})))
+      (ObservableListBasedSignal. (keyword (first-lower propname-without-brackets))
+                                  olist
+                                  (atom {})))
     (let [prop (invoke component (str (first-lower propname) "Property"))] 
-      (PropertyBasedSignal. (keyword (first-lower propname)) prop (atom {})))))
+      (PropertyBasedSignal. (keyword (first-lower propname))
+                            prop
+                            (atom {})))))
+
+
+(defn selection-signal
+  "Creates a signal for a selection model of a component with selectable items."
+  [component propname]
+  (SelectionModelBasedSignal. (keyword (first-lower propname))
+                              (.getSelectionModel component)
+                              (atom {})))
 
 
 (defn comp-eventsource

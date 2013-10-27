@@ -105,6 +105,11 @@
   (-> comp-map (cget comp-path) signals signal-key))
 
 
+(defn component
+  "Returns the toolkits implementation of the visual component that comp-path points to."
+  [view-sig comp-path]
+  (-> view-sig r/getv ::comp-map (cget comp-path)))
+
 (defn signal
   "Returns the signal denoted by signal-key of the visual component that comp-path points to."
   [view-sig comp-path signal-key]

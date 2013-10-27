@@ -4,10 +4,10 @@
             [metam.core :as m])
   (:use [visuals.javafx reactor utils]
         [visuals.utils :only [first-upper]])
-  (:import [javafx.scene.control Button ChoiceBox Label TableView TableColumn TextField]
+  (:import [javafx.scene.control Button ChoiceBox Label ListView TableView TableColumn TextField]
            [javafx.scene Scene]
            [javafx.stage Stage]
-           [visuals.javafx.reactor PropertyBasedSignal]
+           [visuals.javafx.reactor PropertyBasedSignal SelectionModelBasedSignal]
            [org.tbee.javafx.scene.layout MigPane]))
 
 
@@ -97,6 +97,16 @@
   [spec]
   (doto (make Label spec)
     (.setText (:text spec))))
+
+
+(defmethod build :visuals.forml/list
+  [spec]
+  (let [component (make ListView spec)
+        signal-map (merge
+                    (for-props component prop-signal ["disabled" "focused" "items[]"])
+                    (for-props component selection-signal ["selected"]))]
+    (putp! component :signals signal-map)
+    component))
 
 
 (defmethod build :visuals.forml/panel

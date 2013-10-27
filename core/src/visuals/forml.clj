@@ -12,6 +12,9 @@
       (derive ::dropdownlist ::labeled)
       (derive ::dropdownlist ::widget)
       (derive ::label ::widget)
+      (derive ::list ::labeled)
+      (derive ::list ::widget)
+      (derive ::list ::growing)
       (derive ::panel ::growing)
       (derive ::panel ::container)
       (derive ::textfield ::labeled)
@@ -23,6 +26,9 @@
                    :labelyhint [string?]}
    ::label        {:text [string?]
                    :lyhint [string?]}
+   ::list         {:label [string?]
+                   :lyhint [string?]
+                   :labelyhint [string?]}
    ::panel        {:lygeneral [string?]
                    :lycolumns [string?]
                    :lyrows [string?]
@@ -40,6 +46,8 @@
   (fn [spec type-keyword attr-keyword]
     [type-keyword attr-keyword])
   :hierarchy #'forml-hierarchy)
+
+(prefer-method default-value [::growing :lyhint] [::widget :lyhint])
 
 (defmacro ^:private defdefault
   [dispatch-value & forms]

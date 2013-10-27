@@ -7,17 +7,6 @@ Currently this is purely experimental stuff!
 See the [sample](javafx/src/visuals/javafx/sample.clj) to get a first idea.
 
 
-## Ingredients of advanced GUI
-
- - Reactive core ([reactor](https://github.com/friemen/reactor))
- - Capable UI toolkit and set of widgets (currently only *JavaFX*)
- - Data Validation ([examine](https://github.com/friemen/examine))
- - Declarative UI form specification (see visuals.forml namespace, based on [metam](https://github.com/friemen/metam))
- - Form builder for supported toolkits (see visuals.javafx.builder namespace)
- - Formatting/parsing of data (see visuals.parsform namespace)
- - Mapping of domain data to/from signals (part of visuals.core namespace, uses [parsargs](https://github.com/friemen/parsargs))
-
-
 ## Motivation
 
 The interesting thing about rich clients is that they combine some of the nastiest
@@ -42,12 +31,25 @@ answers to the following questions:
  - How does a concise textual specification of UI look like?
  
 
-## Next todos
+## Ingredients of advanced GUI
+Visuals consists of distinct parts, some of which are independent libraries:
 
- - Expose change to domain data as merged event source.
- - Expose explicit user action as event merged event source.
+ - Reactive core ([reactor](https://github.com/friemen/reactor))
+ - Capable UI toolkit and set of widgets (currently only *JavaFX*)
+ - Data Validation ([examine](https://github.com/friemen/examine))
+ - Declarative UI form specification
+   (for grammar see [visuals.forml namespace](core/src/visuals/forml.clj), 
+   based on [metam](https://github.com/friemen/metam))
+ - Form builder for supported toolkits 
+   (for JavaFX see [visuals.javafx.builder namespace](javafx/src/visuals/javafx/builder.clj))
+ - Formatting/parsing of data (see [visuals.parsform namespace](core/src/visuals/parsform.clj))
+ - Mapping of domain data to/from signals 
+   (part of visuals.core namespace, uses [parsargs](https://github.com/friemen/parsargs))
+
+
+## Next Todos
+
  - Automatic rule execution on change of business data.
- - Add list based components: combobox, listbox
  - Open other window (modal and non-modal), but keep side effect out of action
  - Add table
  - Add tree
