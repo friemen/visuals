@@ -58,7 +58,7 @@
     (into [] olist))
   (setv!
     [sig value]
-    (.setAll olist (cast java.util.Collection value))
+    (into-list! olist value)
     value))
 
 

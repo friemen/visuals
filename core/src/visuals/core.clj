@@ -161,35 +161,40 @@
 
 
 (defn update-from-view!
-  "Returns an updated version of view-map where domain data and ui state are
-   updated from the current values of the visual components."
+  "Returns the given view signal with an updated version of view-map where
+   domain data and ui state are updated from the current values of the
+   visual components."
   [view-sig]
   (let [view-map (r/getv view-sig)
-        vc (::vc view-map)]
+        vc (::vc view-map)
+        domain-data (from-components (::domain-data-mapping view-map)
+                                     (::comp-map view-map)
+                                     (::domain-data view-map))
+        view-state (from-components (::ui-state-mapping view-map)
+                                    (::comp-map view-map)
+                                    (::ui-state view-map))]
     (r/setv! view-sig
              (-> view-map
                  (assoc ::comp-map (cmap vc))
-                 (assoc ::domain-data (from-components (::domain-data-mapping view-map)
-                                                       (::comp-map view-map)
-                                                       (::domain-data view-map)))
-                 (assoc ::ui-state (from-components (::ui-state-mapping view-map)
-                                                    (::comp-map view-map)
-                                                    (::ui-state view-map))))))
+                 (assoc ::domain-data domain-data)
+                 (assoc ::ui-state view-state))))
   view-sig)
 
 
 (defn update-to-view!
-  "Writes the domain data and ui state from the view-map into the visual
+  "Writes the domain data and ui state from the view signal into the visual
    components signals."
   [view-sig]
   (let [view-map (r/getv view-sig)
-        {vc ::vc comp-map ::comp-map} view-map]
+        {vc ::vc comp-map ::comp-map} view-map
+        domain-data (::domain-data view-map)
+        ui-state (::ui-state view-map)]
     (to-components! (::domain-data-mapping view-map)
                     comp-map
-                    (::domain-data view-map))
+                    domain-data)
     (to-components! (::ui-state-mapping view-map)
                     comp-map
-                    (::ui-state view-map))
+                    ui-state)
     view-sig))
 
 
