@@ -204,7 +204,7 @@
 
 
 (defn set-action!
-  "Sets f as reaction to the visual components eventsource.
+  "Sets f as reaction to the visual components event source.
    The function f is invoked with current view state as single argument.
    The result of f is set as new view state into the view-sig."
   [view-sig f comp-path evtsource-key]
@@ -334,5 +334,9 @@
                :parser (p/optval fn? identity))))
 
 (defn mapping
+  "Returns a sequence of mappings from data path to signal path,
+   with optional formatter and parser. Example usage:
+   (v/mapping :name    [\"Name\" :text]
+              :age     [\"Birthday\" :text] pf/format-date pf/parse-date)"
   [& args]
   (p/parse mapping-parser args))

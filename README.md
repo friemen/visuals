@@ -1,6 +1,6 @@
 # visuals
 
-GUI library based on reactor, metam and JavaFX.
+A GUI library based on reactor, metam and JavaFX.
 
 Currently this is purely experimental stuff!
 
@@ -33,15 +33,39 @@ answers to the following questions:
 
 ## Concepts
 
-A *Specification* is a textual model of a GUI form.
+A *Spec* is a textual model of a GUI form. An example looks like this:
 
-A *Toolkit* provides the technical infrastructure and components. Examples are JavaFX, Swing or SWT.
+```clojure
+(def p (f/panel "P" :lygeneral "wrap 2" :components [
+            (f/textfield "Name")
+            (f/textfield "Street")
+            (f/dropdownlist "Zipcode")
+            (f/textfield "City")
+            (f/textfield "Birthday")
+            (f/button "Ok" :text "OK" :lyhint "skip")]))
+```
+
+A *Toolkit* provides the technical infrastructure and components.
+It's represented by the `visuals.utils.Toolkit` protocol. 
+Implementations directly access JavaFX, Swing or SWT.
 
 A *Visual Component* is a toolkit specific GUI component like a textfield, button or a window.
+It's represented by the `visuals.core.VisualComponent` protocol. Each visual component has a name
+that serves as it's identifier within its parent component.
 
 A *Component Path* is a vector of component names pointing to a visual component within the tree of components. 
 If the path is denoted as string instead of a vector then only the component name is used to find
 a matching component.
+
+A *Signal* is a time-varying value, or -- in Java terms -- a mutable property. Properties of
+visual components are accessible through the Signal protocol (see reactor.core).
+
+An *Event Source* is a stream of events (more precisely: pairs of timestamp and value, a.k.a occurences).
+For example button presses or changes of signals can be represented by event sources (see reactor.core).
+
+A *Signal Path* is a pair of component path and keyword representing the signal.
+
+An *Event Source Path* is a pair of component path and keyword representing the eventsource.
 
 A *View* represents the current state of a visual component tree as a map.
 The map contains the following keys (all in visuals.core namespace):
@@ -57,11 +81,24 @@ The map contains the following keys (all in visuals.core namespace):
  - ::validation-rule-set -- A map with the set of constraints for validation.
  - ::validation-results -- A map of the current validation results.
 
-A *Signal* is a time-varying value, or -- in Java terms -- a mutable property. Properties of
-visual components are accessible through the Signal protocol (see reactor.core).
+The distinction between *domain data* and *UI state* is somewhat arbitrary. The idea is that domain data
+holds the business related data as actually used in the domain layer of the system. UI state is then
+all additional data that has a meaning only in the UI layer. The mappings between visual components
+are kept in the corresponding -mapping slots of the view map.
 
-A *Event Source* is a stream of events (more precisely: pairs of timestamp and value, a.k.a occurences).
-For example button presses or changes of signals can be represented by event sources.
+*Action functions* are single-arg fns that receive the view map and return the view map. They can be 
+retrieved from namespaces and linked automatically to event sources if they carry a path to an event 
+source as :action meta data like in 
+
+```clojure
+(defn ^{:action ["Ok" :onAction]} ok 
+  [view] 
+  view)
+```
+
+## API overview
+
+TODO
 
 
 ## Ingredients of advanced GUI
@@ -73,7 +110,7 @@ Visuals consists of distinct parts, some of which are independent libraries:
  - Declarative UI form specification
    (for grammar see [visuals.forml namespace](core/src/visuals/forml.clj), 
    based on [metam](https://github.com/friemen/metam),
-   only layout manager is the awesome [MigLayout](http://www.miglayout.com/whitepaper.html))
+   single layout manager is the awesome [MigLayout](http://www.miglayout.com/whitepaper.html))
  - Form builder for supported toolkits 
    (for JavaFX see [visuals.javafx.builder namespace](javafx/src/visuals/javafx/builder.clj))
  - Formatting/parsing of data (see [visuals.parsform namespace](core/src/visuals/parsform.clj))
