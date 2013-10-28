@@ -7,6 +7,8 @@
   (:import [javafx.scene.control Button ChoiceBox Label ListView TableView TableColumn TextField]
            [javafx.scene Scene]
            [javafx.stage Stage]
+           [javafx.util Callback]
+           [javafx.beans.property ReadOnlyObjectWrapper]
            [visuals.javafx.reactor PropertyBasedSignal SelectionModelBasedSignal]
            [org.tbee.javafx.scene.layout MigPane]))
 
@@ -68,6 +70,16 @@
     p))
 
 
+(defn- make-column
+  [spec]
+  (let [tc (TableColumn. (:title spec))]
+    (.setCellValueFactory tc
+                          (reify Callback
+                            (call [_ r]
+                              (ReadOnlyObjectWrapper. (-> r .getValue (get (:key spec)))))))
+    tc))
+
+
 (defmulti build
   (fn [spec]
     (m/metatype spec))
@@ -76,7 +88,7 @@
 
 (defmethod build :default
   [spec]
-  (throw (IllegalArgumentException. (str "Cannot build type " (m/metatype spec)))))
+  (throw (IllegalArgumentException. (str "Cannot build type '" (m/metatype spec) "'"))))
 
 
 (defmethod build :visuals.forml/button
@@ -112,6 +124,19 @@
 (defmethod build :visuals.forml/panel
   [spec]
   (make-panel spec))
+
+
+(defmethod build :visuals.forml/table
+  [spec]
+  (let [component (make TableView spec)
+        columns (.getColumns component)
+        signal-map (merge
+                    (for-props component prop-signal ["disabled" "focused" "items[]"])
+                    (for-props component selection-signal ["selected"]))] 
+    (doseq [tc-spec (:columns spec)]
+      (.add columns (make-column tc-spec)))
+    (putp! component :signals signal-map)
+    component))
 
 
 (defmethod build :visuals.forml/textfield

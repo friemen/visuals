@@ -1,6 +1,7 @@
 (ns visuals.forml
   (:refer-clojure :exclude [list])
-  (:require [metam.core :refer :all]))
+  (:require [metam.core :refer :all]
+            [visuals.utils :refer [first-lower]]))
 
 (declare default-value)
 
@@ -8,6 +9,7 @@
   (-> (make-hierarchy)
       (derive ::container ::component)
       (derive ::widget ::component)
+      (derive ::column ::component)
       ; concrete component types
       (derive ::button ::widget)
       (derive ::dropdownlist ::labeled)
@@ -18,10 +20,15 @@
       (derive ::list ::growing)
       (derive ::panel ::growing)
       (derive ::panel ::container)
+      (derive ::table ::labeled)
+      (derive ::table ::widget)
+      (derive ::table ::growing)
       (derive ::textfield ::labeled)
       (derive ::textfield ::widget))
   {::button       {:text [string?]
                    :lyhint [string?]}
+   ::column       {:title [string?]
+                   :key [keyword?]}
    ::dropdownlist {:label [string?]
                    :lyhint [string?]
                    :labelyhint [string?]}
@@ -35,6 +42,10 @@
                    :lyrows [string?]
                    :lyhint [string?]
                    :components [(type-of? ::component)]}
+   ::table        {:label [string?]
+                   :lyhint [string?]
+                   :labelyhint [string?]
+                   :columns [(type-of? ::column)]}
    ::textfield    {:label [string?]
                    :lyhint [string?]
                    :labelyhint [string?]}
@@ -65,4 +76,6 @@
 (defdefault [::labeled :labelyhint]      "")
 (defdefault [::labeled :label]           (:name spec))
 (defdefault [::button :text]             (:name spec))
+(defdefault [::column :title]            (:name spec))
+(defdefault [::column :key]              (-> spec :name first-lower keyword))
 (defdefault [::window :title]            (:name spec))
