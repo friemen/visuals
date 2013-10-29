@@ -4,7 +4,9 @@
             [metam.core :as m])
   (:use [visuals.javafx reactor utils]
         [visuals.utils :only [first-upper]])
-  (:import [javafx.scene.control Button ChoiceBox Label ListView TableView TableColumn TextField]
+  (:import [javafx.scene.control Button CheckBox ChoiceBox Label ListView
+                                 RadioButton TableView TableColumn TextField
+                                 ToggleGroup]
            [javafx.scene Scene]
            [javafx.stage Stage]
            [javafx.util Callback]
@@ -85,6 +87,13 @@
     tc))
 
 
+(defn- make-radiobutton
+  [spec-or-string]
+  (if (string? spec-or-string)
+    (f/radio spec-or-string)
+    spec-or-string))
+
+
 (defmulti build
   (fn [spec]
     (m/metatype spec))
@@ -102,6 +111,31 @@
     (set-signals! "disabled" "focused" "text")
     (set-eventsources! "onAction")
     (set-icon! (:icon spec))
+    (.setText (:text spec))))
+
+
+(defmethod build :visuals.forml/buttongroup
+  [spec]
+  (let [group (ToggleGroup.)
+        buttons (->> (:buttons spec)
+                     (map make-radiobutton)
+                     vec)
+        panel-spec (f/panel (:name spec)
+                            :components buttons
+                            :lygeneral (if (= :vertical (:orientation spec))
+                                         "flowy"
+                                         ""))
+        panel (make-panel panel-spec)]
+    ;;TODO add signal for selection
+    (doseq [b (visuals.core/children panel)]
+      (.setToggleGroup b group))
+    panel))
+
+
+(defmethod build :visuals.forml/checkbox
+  [spec]
+  (doto (make CheckBox spec)
+    (set-signals! "disabled" "focused" "selected")
     (.setText (:text spec))))
 
 
@@ -131,6 +165,13 @@
 (defmethod build :visuals.forml/panel
   [spec]
   (make-panel spec))
+
+
+(defmethod build :visuals.forml/radio
+  [spec]
+  (doto (make RadioButton spec)
+    (set-signals! "disabled" "focused" "text")
+    (.setText (:text spec))))
 
 
 (defmethod build :visuals.forml/table
