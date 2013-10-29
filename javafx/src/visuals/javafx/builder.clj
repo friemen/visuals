@@ -42,6 +42,11 @@
     c))
 
 
+(defn set-icon!
+  [labeled name]
+  (if name (.setGraphic labeled (image name))))
+
+
 (defn- set-signals!
   "Installs a map with all signals into the custom properties of a visual component."
   [component & propnames]
@@ -96,6 +101,7 @@
   (doto (make Button spec)
     (set-signals! "disabled" "focused" "text")
     (set-eventsources! "onAction")
+    (set-icon! (:icon spec))
     (.setText (:text spec))))
 
 
@@ -108,6 +114,7 @@
 (defmethod build :visuals.forml/label
   [spec]
   (doto (make Label spec)
+    (set-icon! (:icon spec))
     (.setText (:text spec))))
 
 

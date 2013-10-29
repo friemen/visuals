@@ -26,14 +26,16 @@
       (derive ::textfield ::labeled)
       (derive ::textfield ::widget))
   {::button       {:text [string?]
-                   :lyhint [string?]}
+                   :lyhint [string?]
+                   :icon [string?]}
    ::column       {:title [string?]
                    :key [keyword?]}
    ::dropdownlist {:label [string?]
                    :lyhint [string?]
                    :labelyhint [string?]}
    ::label        {:text [string?]
-                   :lyhint [string?]}
+                   :lyhint [string?]
+                   :icon [string?]}
    ::list         {:label [string?]
                    :lyhint [string?]
                    :labelyhint [string?]}

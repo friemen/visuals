@@ -3,6 +3,7 @@
   (:require [visuals.javafx.application])
   (:import [javafx.application Platform Application]
            [javafx.scene Scene Node]
+           [javafx.scene.image ImageView]
            [javafx.stage Stage]))
 
 
@@ -66,3 +67,11 @@
   [component key value]
   (-> component prop-map (.put key value)))
 
+
+(defn image
+  "Returns an ImageView instance from a PNG file images/<name>.png in classpath."
+  [name]
+  (-> (str "images/" name ".png")
+      ClassLoader/getSystemResource
+      .toString
+      ImageView.))
