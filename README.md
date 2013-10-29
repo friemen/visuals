@@ -122,7 +122,7 @@ Visuals consists of distinct parts, some of which are independent libraries:
 
  - Automatic rule execution on change of business data.
  - Open other window (modal and non-modal), but keep side effect out of action
- - Add table
+ - Add editable table
  - Add tree
  - Make validation error display nicer.
 

@@ -298,6 +298,7 @@
         update-to-view!
         install-validation!)))
 
+
 (defn preview
   "Builds and displays the specification of visual components.
    Intended for use in REPL for rapid prototyping."
@@ -306,6 +307,17 @@
                       spec
                       (visuals.forml/window (str "Preview: " (:name spec)) :content spec))]
     (-> window-spec view-signal start! show! run-now)))
+
+
+(defmacro modify!
+  "Executes the given forms in UI thread and updates the ::comp-map of
+   the view.
+   Intended for use in REPL for rapid prototyping."
+  [view-sig & forms]
+  `(let [view# (r/getv ~view-sig)
+         result# (v/run-now ~@forms)]
+     (r/setv! ~view-sig (assoc view# ::comp-map (v/cmap (::vc view#))))
+     result#))
 
 
 (defn- action-meta

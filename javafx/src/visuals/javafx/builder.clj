@@ -32,7 +32,7 @@
     label))
 
 
-(defn- add-component!
+(defn add-component!
   [owner spec]
   (let [c (build spec)
         lyhint (:lyhint spec)]
