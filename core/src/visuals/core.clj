@@ -210,6 +210,9 @@
   [view-sig f comp-path evtsource-key]
   (let [vc (-> view-sig r/getv ::vc)
         evtsource (-> vc cmap (cget comp-path) eventsources evtsource-key)]
+    (when (nil? evtsource)
+      (throw (IllegalArgumentException. (str "Unable to find event source for comp-path "
+                                             comp-path " and key " evtsource-key))))
     (r/unsubscribe evtsource nil) ; remove all existing actions
     (->> evtsource (r/react-with (fn [occ]
                                    (some->> view-sig

@@ -49,20 +49,22 @@
   (if name (.setGraphic labeled (image name))))
 
 
-(defn- set-signals!
-  "Installs a map with all signals into the custom properties of a visual component."
-  [component & propnames]
-  (->> propnames
-       (for-props component prop-signal)
-       (putp! component :signals)))
+(defn- set-signal-map!
+  [component signal-map]
+  (putp! component :signals signal-map))
 
 
-(defn- set-eventsources!
-  "Installs a map with all eventsources into the custom properties of a visual component."
+(defn- set-eventsource-map!
+  [component eventsource-map]
+  (putp! component :eventsources eventsource-map))
+
+
+(defn- define-signals!
   [component & propnames]
   (->> propnames
-       (for-props component comp-eventsource)
-       (putp! component :eventsources)))
+       (binding-specs component prop-signal)
+       make-reactive-map
+       (set-signal-map! component)))
 
 
 (defn- make-panel
@@ -107,11 +109,15 @@
 
 (defmethod build :visuals.forml/button
   [spec]
-  (doto (make Button spec)
-    (set-signals! "disabled" "focused" "text")
-    (set-eventsources! "onAction")
-    (set-icon! (:icon spec))
-    (.setText (:text spec))))
+  (let [component (doto (make Button spec)
+                    (set-icon! (:icon spec))
+                    (.setText (:text spec)))]
+    (define-signals! component "disabled" "focused" "text")
+    (->> (binding-spec component comp-eventsource :action "onAction")
+         vector
+         make-reactive-map
+         (set-eventsource-map! component))
+    component))
 
 
 (defmethod build :visuals.forml/buttongroup
@@ -135,30 +141,38 @@
 (defmethod build :visuals.forml/checkbox
   [spec]
   (doto (make CheckBox spec)
-    (set-signals! "disabled" "focused" "selected")
-    (.setText (:text spec))))
+    (.setText (:text spec))
+    (define-signals! "disabled" "focused" "selected")))
 
 
 (defmethod build :visuals.forml/dropdownlist
   [spec]
-  (doto (make ChoiceBox spec)
-    (set-signals! "disabled" "focused" "items[]" "value")))
+  (let [component (make ChoiceBox spec)
+        signal-map (make-reactive-map
+                    (conj
+                     (binding-specs component prop-signal ["disabled" "focused" "value"])
+                     (binding-spec component list-signal :items "items")))]
+    (set-signal-map! component signal-map)
+    component))
 
 
 (defmethod build :visuals.forml/label
   [spec]
   (doto (make Label spec)
     (set-icon! (:icon spec))
-    (.setText (:text spec))))
+    (.setText (:text spec))
+    (define-signals! "text")))
 
 
-(defmethod build :visuals.forml/list
+(defmethod build :visuals.forml/listbox
   [spec]
   (let [component (make ListView spec)
-        signal-map (merge
-                    (for-props component prop-signal ["disabled" "focused" "items[]"])
-                    (for-props component selection-signal ["selected"]))]
-    (putp! component :signals signal-map)
+        signal-map (make-reactive-map
+                    (conj
+                     (binding-specs component prop-signal ["disabled" "focused" "items"])
+                     (binding-spec component list-signal :items "items")
+                     (binding-spec component selection-signal :selected "selected")))]
+    (set-signal-map! component signal-map)
     component))
 
 
@@ -170,28 +184,34 @@
 (defmethod build :visuals.forml/radio
   [spec]
   (doto (make RadioButton spec)
-    (set-signals! "disabled" "focused" "text")
-    (.setText (:text spec))))
+    (.setText (:text spec))
+    (define-signals! "disabled" "focused" "text")))
 
 
 (defmethod build :visuals.forml/table
   [spec]
   (let [component (make TableView spec)
         columns (.getColumns component)
-        signal-map (merge
-                    (for-props component prop-signal ["disabled" "focused" "items[]"])
-                    (for-props component selection-signal ["selected"]))] 
+        signal-map (make-reactive-map
+                    (conj
+                     (binding-specs component prop-signal ["disabled" "focused"])
+                     (binding-spec component list-signal :items "items")
+                     (binding-spec component selection-signal :selected "selected")))] 
     (doseq [tc-spec (:columns spec)]
       (.add columns (make-column tc-spec)))
-    (putp! component :signals signal-map)
+    (set-signal-map! component signal-map)
     component))
 
 
 (defmethod build :visuals.forml/textfield
   [spec]
-  (doto (make TextField spec)
-    (set-signals! "disabled" "focused" "text" "editable")
-    (set-eventsources! "onAction")))
+  (let [component (doto (make TextField spec))]
+    (define-signals! component "disabled" "focused" "text" "editable")
+    (->> (binding-spec component comp-eventsource :action "onAction")
+         vector
+         make-reactive-map
+         (set-eventsource-map! component))
+    component))
 
 
 (defmethod build :visuals.forml/window
@@ -200,12 +220,16 @@
         scene (doto (Scene. content 500 500)
                 (putp! :spec spec))
         root-stage (root-window)]
-    (doto (if (-> root-stage .getScene)
-            (doto (Stage.) (.initOwner root-stage))
-            root-stage)
-      (.setScene scene)
-      (.setTitle (:title spec))
-      (putp! :spec spec)
-      (set-signals! "title")
-      (set-eventsources! "onCloseRequest"))))
+    (let [component (doto (if (-> root-stage .getScene)
+                            (doto (Stage.) (.initOwner root-stage))
+                            root-stage)
+                      (.setScene scene)
+                      (.setTitle (:title spec))
+                      (putp! :spec spec))]
+      (define-signals! component "title")
+      (->> (binding-spec component comp-eventsource :close "onCloseRequest")
+           vector
+           make-reactive-map
+           (set-eventsource-map! component))
+      component)))
 

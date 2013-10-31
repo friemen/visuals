@@ -91,38 +91,64 @@
     value))
 
 
-(defn for-props
-  "Returns a map property name to signal or eventsource (depends on the factory-fn, see below) for
-   all propnames and the given visual component."
+
+
+;; Utilities for uniform creation of signals and event sources
+
+(defn binding-spec
+  "Creates a binding spec map from the given params."
+  [component factory-fn key propname]
+  {:component component
+   :factory-fn factory-fn
+   :key key
+   :propname propname})
+
+
+(defn binding-specs
+  "Creates a seq of binding specs from the seq of property names.
+   The key is derived from the property name."
   [component factory-fn propnames]
   (->> propnames
-       (map (partial factory-fn component))
-       (map #(vector (react/role %) %))
+       (map #(binding-spec component factory-fn (keyword %) %))))
+
+
+(defn make-reactive
+  "Creates a pair [key reactive] from a binding-spec.
+   A binding spec is a map with keys :component :factory-fn, :key and :propname."
+  [binding-spec]
+  (vector (:key binding-spec)
+                  ((:factory-fn binding-spec) binding-spec)))
+
+
+(defn make-reactive-map
+  "Creates a map of reactives from pairs of keys and property names."
+  [binding-specs]
+  (->> binding-specs
+       (map make-reactive)
        (into {})))
 
 
 ;; Factory functions for event sources and signals
 
+
 (defn prop-signal
-  "Creates a signal for a property of a component. If the propname ends with [] a
-   collection instead of a property is assumed."
-  [component propname]
-  (if (.endsWith propname "[]")
-    (let [propname-without-brackets (.substring propname 0 (- (count propname) 2))
-          getter (str "get" (first-upper propname-without-brackets))
-          olist (invoke component getter)]
-      (ObservableListBasedSignal. (keyword (first-lower propname-without-brackets))
-                                  olist
-                                  (atom {})))
-    (let [prop (invoke component (str (first-lower propname) "Property"))] 
-      (PropertyBasedSignal. (keyword (first-lower propname))
-                            prop
-                            (atom {})))))
+  "Creates a signal for a property of a component."
+  [{component :component key :key propname :propname}]
+  (let [prop (invoke component (str (first-lower propname) "Property"))] 
+      (PropertyBasedSignal. key prop (atom {}))))
+
+
+(defn list-signal
+  "Creates a signal for an observable list."
+  [{component :component key :key propname :propname}]
+  (let [getter (str "get" (first-upper propname))
+        olist (invoke component getter)]
+    (ObservableListBasedSignal. key olist (atom {}))))
 
 
 (defn selection-signal
   "Creates a signal for a selection model of a component with selectable items."
-  [component propname]
+  [{component :component key :key propname :propname}]
   (SelectionModelBasedSignal. (keyword (first-lower propname))
                               (.getSelectionModel component)
                               (atom {})))
@@ -131,12 +157,12 @@
 (defn comp-eventsource
   "Creates an eventsource that is filled by an event handler implementation. The
    event handler is registered with the given visual component."
-  [component propname]
+  [{component :component key :key propname :propname}]
   (if-let [eh (invoke component (str "get" (first-upper propname)))]
     (if (satisfies? reactor.core.EventSource eh)
       eh
       (throw (IllegalStateException. (str "Event handler already bound for " propname ": " eh))))
-    (let [newes (react/eventsource (keyword (first-lower propname)) v/ui-thread)
+    (let [newes (react/eventsource key v/ui-thread)
           eh (reify javafx.event.EventHandler
                (handle [_ evt]
                  (dump "event raised" (react/raise-event! newes evt))))]

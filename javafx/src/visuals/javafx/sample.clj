@@ -37,7 +37,7 @@
 ;; Define and show panel
 #_(def vs (v/preview
            (f/panel "Listbox" :lygeneral "flowy" :components [
-               (f/list "Items")
+               (f/listbox "Items")
                (f/button "Add Item")])))
 
 ;; Add mapping from listbox items to ::v/ui-state
@@ -91,7 +91,7 @@
 
 ;; Action functions
 
-(defn ^{:action ["Ok" :onAction]} ok
+(defn ^{:action ["Ok" :action]} ok
   [view]
   (println "OK action with domain data" (::v/domain-data view))
   (assoc-in view [::v/domain-data :city] "DUCKBERG"))

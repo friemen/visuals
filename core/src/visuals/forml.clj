@@ -1,5 +1,4 @@
 (ns visuals.forml
-  (:refer-clojure :exclude [list])
   (:require [metam.core :refer :all]
             [visuals.utils :refer [first-lower]]))
 
@@ -19,9 +18,9 @@
       (derive ::dropdownlist ::labeled)
       (derive ::dropdownlist ::widget)
       (derive ::label ::widget)
-      (derive ::list ::labeled)
-      (derive ::list ::widget)
-      (derive ::list ::growing)
+      (derive ::listbox ::labeled)
+      (derive ::listbox ::widget)
+      (derive ::listbox ::growing)
       (derive ::panel ::growing)
       (derive ::panel ::container)
       (derive ::radio ::widget)
@@ -35,8 +34,8 @@
                    :icon [string?]}
    ::buttongroup  {:label [string?]
                    :labelyhint [string?]
-                   :orientation [(value-of? :vertical :horizontal)]
-                   :buttons [#(or (string? %) ((type-of? ::radio) %))]}
+                   :orientation [(value-of :vertical :horizontal)]
+                   :buttons [(coll #(or (string? %) ((type-of ::radio) %)))]}
    ::checkbox     {:label [string?]
                    :labelyhint [string?]
                    :text [string?]}
@@ -48,25 +47,25 @@
    ::label        {:text [string?]
                    :lyhint [string?]
                    :icon [string?]}
-   ::list         {:label [string?]
+   ::listbox      {:label [string?]
                    :lyhint [string?]
                    :labelyhint [string?]}
    ::panel        {:lygeneral [string?]
                    :lycolumns [string?]
                    :lyrows [string?]
                    :lyhint [string?]
-                   :components [(type-of? ::component)]}
+                   :components [(coll (type-of ::component))]}
    ::radio        {:text [string?]
                    :value [(complement nil?)]}
    ::table        {:label [string?]
                    :lyhint [string?]
                    :labelyhint [string?]
-                   :columns [(type-of? ::column)]}
+                   :columns [(coll (type-of ::column))]}
    ::textfield    {:label [string?]
                    :lyhint [string?]
                    :labelyhint [string?]}
    ::window       {:title [string?]
-                   :content [(type-of? ::container)]}}
+                   :content [(type-of ::container)]}}
   #'default-value)
 
 
