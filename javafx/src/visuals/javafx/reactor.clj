@@ -4,91 +4,103 @@
             [visuals.core :as v]
             [visuals.utils :refer :all]))
 
-(defrecord PropertyBasedSignal [propname property clmap-atom] 
+(defrecord PropertyBasedSignal [propname property clmap-atom updated-atom] 
   reactor.core/Reactive
   (subscribe
-    [sig f followers]
+    [sig follower f]
     (let [l (reify javafx.beans.value.ChangeListener
               (changed [_ subject old new] (f new)))]
-      (swap! clmap-atom #(assoc % f [l followers]))
+      (swap! clmap-atom #(assoc % f [l follower]))
       (.addListener property l)))
   (unsubscribe
     [sig f]
-    (when-let [[l followers] (get @clmap-atom f)]
+    (when-let [[l _] (get @clmap-atom f)]
       (swap! clmap-atom #(dissoc % f))
       (.removeListener property l)))
   (followers
     [sig]
-    (->> clmap-atom deref vals second (apply concat)))
+    (->> clmap-atom deref vals (map second)))
   (role
     [sig]
     propname)
+  (publish!
+    [sig value]
+    (.setValue property value)
+    (reset! updated-atom (react/now))
+    value)
   reactor.core/Signal
   (getv
     [sig]
     (.getValue property))
-  (setv!
-    [sig value]
-    (.setValue property value)
-    value))
+  (last-updated
+    [sig]
+    @updated-atom))
 
 
-(defrecord ObservableListBasedSignal [propname olist clmap-atom]
+(defrecord ObservableListBasedSignal [propname olist clmap-atom updated-atom]
   reactor.core/Reactive
   (subscribe
-    [sig f followers]
+    [sig follower f]
     (let [l (reify javafx.collections.ListChangeListener
               (onChanged [_ evt] (f (.getList evt))))]
-      (swap! clmap-atom #(assoc % f [l followers]))
+      (swap! clmap-atom #(assoc % f [l follower]))
       (.addListener olist l)))
   (unsubscribe
     [sig f]
-    (when-let [[l followers] (get @clmap-atom f)]
+    (when-let [[l _] (get @clmap-atom f)]
       (swap! clmap-atom #(dissoc % f))
       (.removeListener olist l)))
   (followers
     [sig]
-    (->> clmap-atom deref vals second (apply concat)))
+    (->> clmap-atom deref vals (map second)))
   (role
     [sig]
     propname)
+  (publish!
+    [sig value]
+    (v/run-later (do (reset! updated-atom (react/now))
+                     (into-list! olist value)))
+    value)
   reactor.core/Signal
   (getv
     [sig]
     (into [] olist))
-  (setv!
-    [sig value]
-    (v/run-later (into-list! olist value))
-    value))
+  (last-updated
+    [sig]
+    @updated-atom))
 
 
-(defrecord SelectionModelBasedSignal [propname selmodel clmap-atom]
+(defrecord SelectionModelBasedSignal [propname selmodel clmap-atom updated-atom]
   reactor.core/Reactive
   (subscribe
-    [sig f followers]
+    [sig follower f]
     (let [l (reify javafx.collections.ListChangeListener
               (onChanged [_ evt] (f (.getList evt))))]
-      (swap! clmap-atom #(assoc % f [l followers]))
+      (swap! clmap-atom #(assoc % f [l follower]))
       (.addListener (.getSelectedIndices selmodel) l)))
   (unsubscribe
     [sig f]
-    (when-let [[l followers] (get @clmap-atom f)]
+    (when-let [[l _] (get @clmap-atom f)]
       (swap! clmap-atom #(dissoc % f))
       (.removeListener (.getSelectedIndices selmodel) l)))
   (followers
     [sig]
-    (->> clmap-atom deref vals second (apply concat)))
+    (->> clmap-atom deref vals (map second)))
   (role
     [sig]
     propname)
+  (publish!
+    [sig value]
+    (v/run-later (do (reset! updated-atom (react/now))
+                     (.selectIndices selmodel (int (first value)) (int-array (rest value)))))
+    value)
   reactor.core/Signal
   (getv
     [sig]
     (into [] (.getSelectedIndices selmodel)))
-  (setv!
-    [sig value]
-    (v/run-later (.selectIndices selmodel (int (first value)) (int-array (rest value))))
-    value))
+  (last-updated
+    [sig]
+    @updated-atom))
 
 
 
@@ -135,7 +147,7 @@
   "Creates a signal for a property of a component."
   [{component :component key :key propname :propname}]
   (let [prop (invoke component (str (first-lower propname) "Property"))] 
-      (PropertyBasedSignal. key prop (atom {}))))
+      (PropertyBasedSignal. key prop (atom {}) (atom 0))))
 
 
 (defn list-signal
@@ -143,7 +155,7 @@
   [{component :component key :key propname :propname}]
   (let [getter (str "get" (first-upper propname))
         olist (invoke component getter)]
-    (ObservableListBasedSignal. key olist (atom {}))))
+    (ObservableListBasedSignal. key olist (atom {}) (atom 0))))
 
 
 (defn selection-signal
@@ -151,7 +163,8 @@
   [{component :component key :key propname :propname}]
   (SelectionModelBasedSignal. (keyword (first-lower propname))
                               (.getSelectionModel component)
-                              (atom {})))
+                              (atom {})
+                              (atom 0)))
 
 
 (defn comp-eventsource
