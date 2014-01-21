@@ -17,22 +17,6 @@
            '[reactor.core :as r]
            '[visuals.forml :as f])
 
-;; Define and start view as defined below.
-#_(def view-sig (v/run-now (s/start-view!)))
-;; The var view-sig holds the immutable map that represents a View.
-
-
-;; Get value from UI
-#_(-> view-sig (v/signal "City" :text) r/getv)
-
-
-;; Set value into UI
-#_(-> view-sig (v/signal "City" :text) (r/setv! "BAZ"))
-
-
-;; Get event source and trigger an event
-#_(-> view-sig (v/eventsource "Ok" :onAction) (r/raise-event! nil))
-
 
 ;; Define and show panel
 #_(def vs (v/preview
@@ -48,7 +32,27 @@
 #_(v/set-action! vs (fn [view]
                       (update-in view [::v/ui-state :items] #(conj % "NEW")))
                  "Add Item"
-                 :onAction)
+                 :action)
+
+
+;; First load this namespace into a REPL
+
+;; Define and start view as defined below.
+#_(def view-sig (v/run-now (s/start-view!)))
+;; The var view-sig holds the immutable map that represents a View.
+
+
+;; Get value from UI
+#_(-> view-sig (v/signal "City" :text) r/getv)
+
+
+;; Set value into UI
+#_(-> view-sig (v/signal "City" :text) (r/setv! "BAZ"))
+
+
+;; Get event source and trigger an event
+#_(-> view-sig (v/eventsource "Ok" :action) (r/raise-event! nil))
+
 
 
 

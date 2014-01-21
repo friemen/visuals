@@ -169,9 +169,10 @@
   (let [component (make ListView spec)
         signal-map (make-reactive-map
                     (conj
-                     (binding-specs component prop-signal ["disabled" "focused" "items"])
+                     (binding-specs component prop-signal ["disabled" "focused"])
                      (binding-spec component list-signal :items "items")
                      (binding-spec component selection-signal :selected "selected")))]
+    (println signal-map)
     (set-signal-map! component signal-map)
     component))
 
