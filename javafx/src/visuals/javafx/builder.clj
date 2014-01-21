@@ -218,7 +218,7 @@
 (defmethod build :visuals.forml/window
   [spec]
   (let [content (build (:content spec))
-        scene (doto (Scene. content 500 500)
+        scene (doto (Scene. content)
                 (putp! :spec spec))
         root-stage (root-window)]
     (let [component (doto (if (-> root-stage .getScene)

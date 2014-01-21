@@ -15,7 +15,7 @@
 (defrecord JfxToolkit []
   Toolkit
   (build* [tk spec] (builder/build spec))
-  (show!* [tk vc] (.show vc))
+  (show!* [tk vc] (.show vc) (when (instance? Stage vc) (.sizeToScene vc)))
   (hide!* [tk vc] (.hide vc))
   (run-later*
     [tk f]
