@@ -22,16 +22,30 @@
 #_(def vs (v/preview
            (f/panel "Listbox" :lygeneral "flowy" :components [
                (f/listbox "Items")
-               (f/button "Add Item")])))
+               (f/panel "Actions" :lygeneral "nogrid, ins 0" :components [
+                   (f/button "Add Item")
+                   (f/button "Remove Item")])])))
 
 ;; Add mapping from listbox items to ::v/ui-state
-#_(-> vs (v/update! ::v/ui-state-mapping (v/mapping :items ["Items" :items])))
+#_(-> vs (v/update! ::v/ui-state-mapping (v/mapping :items ["Items" :items]
+                                                    :selected ["Items" :selected])))
 
 
-;; Add action method to :onAction eventsource of a button
+;; Add action method to :action eventsource of a button
 #_(v/set-action! vs (fn [view]
-                      (update-in view [::v/ui-state :items] #(conj % "NEW")))
+                      (update-in view [::v/ui-state :items] #(conj % (str "NEW " (count %)))))
                  "Add Item"
+                 :action)
+
+#_(v/set-action! vs (fn [view]
+                      (let [{items :items s :selected} (::v/ui-state view)]
+                        (assoc-in view [::v/ui-state :items]
+                                  (->> items
+                                       (map vector (range))
+                                       (remove #((set s) (first %)))
+                                       (map second)
+                                       vec))))
+                 "Remove Item"
                  :action)
 
 

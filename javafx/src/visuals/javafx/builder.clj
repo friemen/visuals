@@ -172,7 +172,6 @@
                      (binding-specs component prop-signal ["disabled" "focused"])
                      (binding-spec component list-signal :items "items")
                      (binding-spec component selection-signal :selected "selected")))]
-    (println signal-map)
     (set-signal-map! component signal-map)
     component))
 
