@@ -92,7 +92,8 @@
   (publish!
     [sig value]
     (v/run-later (do (reset! updated-atom (react/now))
-                     (.selectIndices selmodel (int (first value)) (int-array (rest value)))))
+                     (when value
+                       (.selectIndices selmodel (int (first value)) (int-array (rest value))))))
     value)
   reactor.core/Signal
   (getv

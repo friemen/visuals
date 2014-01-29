@@ -8,7 +8,7 @@
                                  RadioButton TableView TableColumn TextField
                                  ToggleGroup]
            [javafx.scene Scene]
-           [javafx.stage Stage]
+           [javafx.stage Stage Modality]
            [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
            [visuals.javafx.reactor PropertyBasedSignal SelectionModelBasedSignal]
@@ -214,15 +214,30 @@
     component))
 
 
+(defn- make-stage
+  "Returns either the root stage if it wasn't already initialized with a scene,
+   or a new stage that is owner by the root stage, or an explicitly specified
+   owner."
+  [spec]
+  (let [root-stage (root-window)]
+    (if (-> root-stage .getScene)
+      (doto (Stage.)
+        (.initOwner (if-let [owner (:owner spec)]
+                      owner
+                      root-stage))
+        (.initModality (case (:modality spec)
+                         :window Modality/WINDOW_MODAL
+                         :application Modality/APPLICATION_MODAL
+                         Modality/NONE)))
+      root-stage)))
+
+
 (defmethod build :visuals.forml/window
   [spec]
   (let [content (build (:content spec))
         scene (doto (Scene. content)
-                (putp! :spec spec))
-        root-stage (root-window)]
-    (let [component (doto (if (-> root-stage .getScene)
-                            (doto (Stage.) (.initOwner root-stage))
-                            root-stage)
+                (putp! :spec spec))]
+    (let [component (doto (make-stage spec)
                       (.setScene scene)
                       (.setTitle (:title spec))
                       (putp! :spec spec))]

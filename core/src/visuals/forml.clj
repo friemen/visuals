@@ -65,7 +65,9 @@
                    :lyhint [string?]
                    :labelyhint [string?]}
    ::window       {:title [string?]
-                   :content [(type-of ::container)]}}
+                   :content [(type-of ::container)]
+                   :owner []
+                   :modality [(value-of :none :window :application)]}}
   #'default-value)
 
 
@@ -99,3 +101,5 @@
 (defdefault [::radio :value]             (:name spec))
 (defdefault [::widget :lyhint]           "")
 (defdefault [::window :title]            (:name spec))
+(defdefault [::window :owner]            nil)
+(defdefault [::window :modality]         :none)
