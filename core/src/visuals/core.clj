@@ -204,6 +204,11 @@
     view-sig))
 
 
+(defn- valid-view?
+  [view]
+  (when (satisfies? VisualComponent (::vc view))
+    view))
+
 (defn set-action!
   "Sets f as reaction to the visual components event source.
    The function f is invoked with current view state as single argument.
@@ -220,6 +225,7 @@
                                             update-from-view!
                                             r/getv
                                             f
+                                            valid-view?
                                             (r/setv! view-sig))
                                    (update-to-view! view-sig))))
     evtsource))

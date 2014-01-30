@@ -99,8 +99,7 @@
                  ::v/action-fns {["Edit" :action] (fn [view]
                                                     (if-let [s (-> view ::v/ui-state :selected first)]
                                                       (start-details! (::v/vc view)
-                                                                      (-> view ::v/domain-data :addresses (nth s))))
-                                                    view)})
+                                                                      (-> view ::v/domain-data :addresses (nth s)))))})
       v/start!
       v/show!))
 
