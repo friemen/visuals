@@ -71,40 +71,43 @@
     (-> (f/window "Details" :content details-panel)
         v/view-signal
         (v/update! ::v/domain-data-mapping domain-mapping
-                   ::v/domain-data {:name "Donald Duck"
-                                    :street "Upperstr. 15"
-                                    :zipcode "4711"
-                                    :city "Duckberg"}
+                   ::v/domain-data address
                    ::v/ui-state-mapping ui-mapping
                    ::v/ui-state {:zipcodes ["12345" "53113" "4711"]}
                    ::v/validation-rule-set validation-rules 
-                   ::v/action-fns (v/action-fns 'visuals.javafx.sample-addressbook))
+                   ::v/action-fns {["Ok" :action] ok})
         v/start!
         v/show!)))
 
+
+(def addresses (atom [{:name "Donald Duck"
+                       :street "Upperstr. 15"
+                       :zipcode "4711"
+                       :city "Duckberg"}
+                      {:name "Mickey Mouse"
+                       :street "Downstr. 42"
+                       :zipcode "4711"
+                       :city "Duckberg"}]))
 
 (defn start-master!
   []
-  (let [addresses [{:name "Donald Duck"
-                    :street "Upperstr. 15"
-                    :zipcode "4711"
-                    :city "Duckberg"}]]
-    (-> (f/window "Addressbook" :content master-panel)
-        v/view-signal
-        (v/update! ::v/domain-data-mapping (v/mapping :addresses ["Addresses" :items])
-                   ::v/domain-data {:addresses addresses}
-                   ::v/ui-state-mapping (v/mapping :selected ["Addresses" :selected])
-                   ::v/action-fns {["Edit" :action] (fn [view]
-                                                     (if-let [s (-> view ::v/ui-state :selected first)]
-                                                       (start-details! (::v/vc view)
-                                                                       (nth addresses s))))})
-        v/start!
-        v/show!)))
+  (-> (f/window "Addressbook" :content master-panel)
+      v/view-signal
+      (v/update! ::v/domain-data-mapping (v/mapping :addresses ["Addresses" :items])
+                 ::v/domain-data {:addresses @addresses}
+                 ::v/ui-state-mapping (v/mapping :selected ["Addresses" :selected])
+                 ::v/action-fns {["Edit" :action] (fn [view]
+                                                    (if-let [s (-> view ::v/ui-state :selected first)]
+                                                      (start-details! (::v/vc view)
+                                                                      (-> view ::v/domain-data :addresses (nth s))))
+                                                    view)})
+      v/start!
+      v/show!))
 
 ;; In the REPL switch to this namespace and load it
 
 ;; Define and start view as defined below.
-#_(def view-sig (v/run-now (start-view!)))
+#_(def view-sig (v/run-now (start-master!)))
 ;; The var view-sig holds the immutable map that represents a View.
 
 

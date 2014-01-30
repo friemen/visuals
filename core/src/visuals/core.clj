@@ -71,6 +71,7 @@
   "Returns a map of component path to visual component by recursively
    visiting the tree of visual components."
   [vc]
+  {:pre [(satisfies? VisualComponent vc)]}
   (let [walk (fn walk [prefix vc]
                (let [p (conj prefix (compname vc))]
                  (concat [[p vc]]
@@ -225,7 +226,7 @@
 
 
 (defn- connect-actions-to-eventsources!
-  "Subscribes all functions from the evtsource-fns map to the event sources in v."
+  "Subscribes all functions from the action-fns map to the event sources in v."
   [view-sig]
   (doseq [[[comp-path evtsource-key] f] (-> view-sig r/getv ::action-fns)]
     (set-action! view-sig f comp-path evtsource-key))
