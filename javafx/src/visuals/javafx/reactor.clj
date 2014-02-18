@@ -4,6 +4,7 @@
             [visuals.core :as v]
             [visuals.utils :refer :all]))
 
+
 (defrecord PropertyBasedSignal [propname property clmap-atom updated-atom] 
   reactor.core/Reactive
   (subscribe
@@ -92,8 +93,9 @@
   (publish!
     [sig value]
     (v/run-later (do (reset! updated-atom (react/now))
-                     (when value
-                       (.selectIndices selmodel (int (first value)) (int-array (rest value))))))
+                     (if (seq value)
+                       (.selectIndices selmodel (int (first value)) (int-array (rest value)))
+                       (.clearSelection selmodel))))
     value)
   reactor.core/Signal
   (getv
@@ -102,8 +104,6 @@
   (last-updated
     [sig]
     @updated-atom))
-
-
 
 
 ;; Utilities for uniform creation of signals and event sources

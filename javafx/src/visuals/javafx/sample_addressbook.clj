@@ -10,7 +10,7 @@
 
 ;; Configure to use JavaFX toolkit
 
-(v/init-toolkit! (tk/->JfxToolkit))
+(defonce toolkit (v/init-toolkit! (tk/->JfxToolkit)))
 
 
 
@@ -47,8 +47,8 @@
 
 ;; Action functions
 
-(defn ^{:action ["Ok" :action]} ok
-  [view]
+(defn ^{:events ["Ok" :action]} ok
+  [view evt]
   (println "OK action with domain data" (::v/domain-data view))
   (assoc-in view [::v/domain-data :city] "DUCKBERG"))
 
@@ -57,6 +57,7 @@
 
 (defn start-details!
   [owner address]
+  (println "START DETAILS")
   (let [domain-mapping
         (v/mapping :name    ["Name" :text]
                    :street  ["Street" :text]
@@ -75,7 +76,7 @@
                    ::v/ui-state-mapping ui-mapping
                    ::v/ui-state {:zipcodes ["12345" "53113" "4711"]}
                    ::v/validation-rule-set validation-rules 
-                   ::v/action-fns {["Ok" :action] ok})
+                   ::v/handler-fns {["Ok" :action] ok})
         v/start!
         v/show!)))
 
@@ -95,29 +96,33 @@
       v/view-signal
       (v/update! ::v/domain-data-mapping (v/mapping :addresses ["Addresses" :items])
                  ::v/domain-data {:addresses @addresses}
-                 ::v/ui-state-mapping (v/mapping :selected ["Addresses" :selected])
-                 ::v/action-fns {["Edit" :action] (fn [view]
-                                                    (if-let [s (-> view ::v/ui-state :selected first)]
-                                                      (start-details! (::v/vc view)
-                                                                      (-> view ::v/domain-data :addresses (nth s)))))})
-      v/start!
+                 ::v/ui-state-mapping (v/mapping :selected ["Addresses" :selected]))
+      (v/start! (fn [view evt]
+                  (condp v/event-matches? evt
+                    ["Edit" :action]
+                    (if-let [s (-> view ::v/ui-state :selected first)]
+                        (start-details! (::v/vc view)
+                                         (-> view ::v/domain-data :addresses (nth s))))
+                    view)
+                  view))
       v/show!))
+
 
 ;; In the REPL switch to this namespace and load it
 
 ;; Define and start view as defined below.
-#_(def view-sig (v/run-now (start-master!)))
+#_(def master (v/run-now (start-master!)))
 ;; The var view-sig holds the immutable map that represents a View.
 
 
 ;; Get value from UI
-#_(-> view-sig (v/signal "City" :text) r/getv)
+#_(-> details (v/signal "City" :text) r/getv)
 
 
 ;; Set value into UI
-#_(-> view-sig (v/signal "City" :text) (r/setv! "BAZ"))
+#_(-> details (v/signal "City" :text) (r/setv! "BAZ"))
 
 
 ;; Get event source and trigger an event
-#_(-> view-sig (v/eventsource "Ok" :action) (r/raise-event! nil))
+#_(-> details (v/eventsource "Ok" :action) (r/raise-event! nil))
 

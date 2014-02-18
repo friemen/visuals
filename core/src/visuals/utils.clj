@@ -6,6 +6,7 @@
   (build* [tk spec])
   (show!* [tk vc])
   (hide!* [tk vc])
+  (translate-event [tk comp-map event])
   (run-later* [tk f]))
 
 

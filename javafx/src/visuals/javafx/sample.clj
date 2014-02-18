@@ -1,7 +1,9 @@
 (ns visuals.javafx.sample
   "Sample"
   (:require [visuals.javafx.toolkit :as tk]
-            [visuals.core :as v]))
+            [visuals.core :as v]
+            [reactor.core :as r]
+            [visuals.forml :as f]))
 
 ;; Configure to use JavaFX toolkit
 
@@ -18,13 +20,13 @@
 
 ;; Define and show panel
 #_(def vs (v/preview
-           (f/panel "Listbox" :lygeneral "flowy"
+           (f/panel "Content" :lygeneral "flowy"
                     :components
                     [(f/listbox "Items")
                      (f/panel "Actions" :lygeneral "nogrid, ins 0"
                               :components
                               [(f/button "Add Item")
-                               (f/button "Remove Item")])])))
+                               (f/button "Remove Items")])])))
 
 
 ;; Add data to the list
@@ -36,21 +38,25 @@
 
 
 ;; Add action method to :action eventsource of a button
-#_(v/set-action! vs (fn [view]
-                      (update-in view [::v/ui-state :items] #(conj % (str "NEW " (count %)))))
-                 "Add Item"
-                 :action)
+#_(v/install-event-handler!
+   vs
+   (fn [view evt]
+     (update-in view [::v/ui-state :items] #(conj % (str "NEW " (count %)))))
+   "Add Item"
+   :action)
 
-#_(v/set-action! vs (fn [view]
-                      (let [{items :items s :selected} (::v/ui-state view)]
-                        (assoc-in view [::v/ui-state :items]
-                                  (->> items
-                                       (map vector (range))
-                                       (remove #((set s) (first %)))
-                                       (map second)
-                                       vec))))
-                 "Remove Item"
-                 :action)
+#_(v/install-event-handler!
+   vs
+   (fn [view evt]
+     (let [{items :items s :selected} (::v/ui-state view)]
+       (assoc-in view [::v/ui-state :items]
+                 (->> items
+                      (map vector (range))
+                      (remove #((set s) (first %)))
+                      (map second)
+                      vec))))
+   "Remove Item"
+   :action)
 
 
 

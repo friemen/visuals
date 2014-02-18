@@ -216,7 +216,7 @@
 
 (defn- make-stage
   "Returns either the root stage if it wasn't already initialized with a scene,
-   or a new stage that is owner by the root stage, or an explicitly specified
+   or a new stage that is owned by the root stage, or an explicitly specified
    owner."
   [spec]
   (let [root-stage (root-window)]
@@ -237,10 +237,13 @@
   (let [content (build (:content spec))
         scene (doto (Scene. content)
                 (putp! :spec spec))]
-    (let [component (doto (make-stage spec)
+    (let [component (doto (if (contains? spec :into)
+                            (:into spec)
+                            (make-stage spec))
                       (.setScene scene)
+                      (.sizeToScene)
                       (.setTitle (:title spec))
-                      (putp! :spec spec))]
+                      (putp! :spec (dissoc spec :into)))]
       (define-signals! component "title")
       (->> (binding-spec component comp-eventsource :close "onCloseRequest")
            vector
