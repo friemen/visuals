@@ -19,10 +19,8 @@
   (signals [vc]))
 
 
+;; ----------------------------------------------------------------------------
 (defonce toolkit nil)
-
-(defonce view-signals (atom {}))
-
 
 (defn init-toolkit!
   [tk]
@@ -69,6 +67,44 @@
   (hide!* toolkit (-> view-sig r/getv ::vc))
   view-sig)
 
+;; ----------------------------------------------------------------------------
+;; A map from name of the top-level spec to view signal containing
+;;  all views that are currently visible.
+(defonce view-signals (atom {}))
+
+(defn all-views
+  "Returns a map of all visible views (not view signals)."
+  []
+  (->> view-signals
+       deref
+       (map (juxt first (comp r/getv second)))
+       (into {})))
+
+
+(defn- close-missing-views!
+  "Compares the given map of views with the global view-signals map
+  and hides all views that are missing in views-map but exist in
+  view-signals."
+  [views-map]
+  (let [missing-view-names (->> view-signals deref keys (remove views-map))]
+    (doseq [k missing-view-names]
+      (hide! (@view-signals k)))
+    (swap! view-signals #(apply dissoc % missing-view-names))))
+
+(declare start!)
+
+(defn- start-new-views!
+  "Compares the given map of views with the global view-signals map
+  and creates new views for those entries that have their ::vc slot
+  set to nil."
+  [views-map]
+  (let [new-views (->> views-map
+                       (map second)
+                       (filter #(-> % ::vc nil?)))]
+    (doseq [v new-views]
+      (-> v r/signal start! show!))))
+
+;; ----------------------------------------------------------------------------
 
 (defn cmap
   "Returns a map of component path to visual component by recursively
@@ -96,11 +132,6 @@
       (if (> (count ks) 1)
         (throw (IllegalArgumentException. (str "Key '" comp-path "' is not unique among " (keys comp-map))))
         (get comp-map (first ks))))))
-
-
-(defn- as-vector
-  [x]
-  (if (vector? x) x (if (coll? x) (vec x) (vector x))))
 
 
 (defn- sigget
@@ -158,7 +189,7 @@
 
 (defn from-components
   "Associates the values of the signals contained in comp-map into the given
-   data map."
+  data map."
   [mapping comp-map data]
   (let [sig-values (for [{parse :parser
                           data-path :data-path
@@ -175,16 +206,19 @@
 
 (defn update!
   "Updates the view-map within the view-signal by assoc'ing the given
-   key-value-pairs."
+  key-value-pairs."
   [view-sig & kvs]
   (r/setv! view-sig (apply assoc (conj kvs (r/getv view-sig))))
   view-sig)
 
 
 (defn update-from-view!
-  "Returns the given view signal with an updated version of view-map where
-   domain data and ui state are updated from the current values of the
-   visual components."
+  "Returns the given view signal with an updated version of its map where
+  the following data is updated from the view state:
+  - ::domain-data
+  - ::ui-state
+  - ::comp-map
+  - ::other-views"
   [view-sig]
   (let [view (r/getv view-sig)
         vc (::vc view)
@@ -198,18 +232,27 @@
              (-> view
                  (assoc ::comp-map (cmap vc))
                  (assoc ::domain-data domain-data)
-                 (assoc ::ui-state view-state))))
+                 (assoc ::ui-state view-state)
+                 (assoc ::all-views (all-views)))))
   view-sig)
 
 
 (defn update-to-view!
-  "Writes the domain data and ui state from the view signal into the visual
-   components signals."
+  "Writes the domain data and ui state from the view signal into 
+  the visual components signals.
+  Closes views that are missing from ::all-views map when compared
+  to the global view-signals map.
+  Creates new views that are contained in ::all-views but are
+  missing in global view-signals map."
   [view-sig]
   (let [view-map (r/getv view-sig)
-        {vc ::vc comp-map ::comp-map} view-map
-        domain-data (::domain-data view-map)
-        ui-state (::ui-state view-map)]
+        {vc ::vc
+         comp-map ::comp-map
+         domain-data ::domain-data
+         ui-state ::ui-state
+         all-views ::all-views} view-map]
+    (close-missing-views! all-views)
+    (start-new-views! all-views)
     (to-components! (::domain-data-mapping view-map)
                     comp-map
                     domain-data)
@@ -227,29 +270,35 @@
 
 
 (defn- execute-event-handler!
-  "The function f is invoked with current view state and the event.
-   The result of f is set as new view state into the view-sig.
-   The current view state is returned."
+  "Executes a function as event handler that changes the view state.
+  f can either be a function or a var pointing to a function.
+  The function f is invoked with current view state and the event.
+  The result of f is set as new view state into the view-sig.
+  The current view state is returned."
   [view-sig f occ]
   (let [view (-> view-sig update-from-view! r/getv)
-        new-view (f view (:event occ))]
+        new-view ((deref-fn f) view (:event occ))]
     (when (valid-view? new-view)
       (r/setv! view-sig new-view)
       (update-to-view! view-sig))
     view-sig))
 
 
-(defn install-event-handler!
-  "Sets f as reaction to the visual components event source."
-  [view-sig f comp-path evtsource-key]
-  (let [vc (-> view-sig r/getv ::vc)
-        evtsource (-> vc cmap (cget comp-path) eventsources evtsource-key)]
-    (when (nil? evtsource)
-      (throw (IllegalArgumentException. (str "Unable to find event source for comp-path "
-                                             comp-path " and key " evtsource-key))))
-    (r/unsubscribe evtsource nil) ; remove all existing actions
-    (->> evtsource (r/react-with (partial execute-event-handler! view-sig f)))
-    evtsource))
+(defn install-handler!
+  "Merges all eventsources of the view into one single eventsource,
+  assocs this with key ::eventsource into the view and registers 
+  f-or-derefable as listener to the aggregating eventsource.
+  If f-or-derefable is omitted it is lookup up with ::handler-fn 
+  in view-sig."
+  ([view-sig]
+     (install-handler! view-sig (::handler-fn (r/getv view-sig))))
+  ([view-sig f-or-derefable]
+     (let [events (all-events view-sig)
+           react-fn (fn react-fn [occ]
+                      (execute-event-handler! view-sig f-or-derefable occ))]
+       (update! view-sig ::eventsource events)
+       (r/subscribe events nil react-fn)
+       view-sig)))
 
 
 (defn- components-with-invalid-data
@@ -266,6 +315,8 @@
 
 
 (defn- validate!
+  "Gets data from the view, validates it, attaches 
+  the results to the view and flags any errors."
   [view-sig data-path]
   (update-from-view! view-sig)
   (let [{current-results ::validation-results
@@ -281,6 +332,7 @@
 
 
 (defn- install-validation!
+  "Registers a validation listener for all domain-data signals."
   [view-sig]
   (let [{mapping ::domain-data-mapping
          comp-map ::comp-map} (r/getv view-sig)]
@@ -292,73 +344,56 @@
   view-sig)
 
 
-(defn view-signal
+(defn view
   "Creates a new view that represents the visual components,
-   the domain data, ui state, validation results etc.
-   The actual building and linking step is done via (start! v)."
+  the domain data, ui state, validation results etc."
+  [spec & kvs]
+  (->> kvs
+       (partition 2)
+       (map vec)
+       (into {::spec spec ; model of the form
+              ::vc nil ; root component of the built visual component tree
+              ::comp-map {}   ; corresponding map of visual components
+              ::domain-data {}          ; business domain data
+              ::domain-data-mapping [] ; mapping between signals and business domain data
+              ::ui-state {} ; relevant components ui state (enabled, editable, visible and others)
+              ::ui-state-mapping [] ; mapping between signals and ui state data
+              ::handler-fn (fn [view evt] view) ; event handler function or a derefable containing fn
+              ::eventsource nil ; eventsource that merges all eventsources of the view
+              ::validation-rule-set {}  ; rule set for validation
+              ::validation-results {}   ; current validation results
+              ::all-views {}}))); a map from name of the root element of spec to the view  
+
+
+(defn view-signal
+  "Creates a new view-signal and set the given spec.
+  The actual building and linking step is done via (start! v)."
   [spec]
-  (r/signal
-   {::spec spec  ; model of the form
-    ::vc nil ; root component of the built visual component tree
-    ::comp-map {}   ; corresponding map of visual components
-    ::domain-data {}  ; business domain data
-    ::domain-data-mapping [] ; mapping between signals and business domain data
-    ::ui-state {} ; relevant components ui state (enabled, editable, visible and others)
-    ::ui-state-mapping [] ; mapping between signals and ui state data
-    ::handler-fns {} ; mapping of eventsource paths to event handler functions
-    ::eventsource nil ; eventsource that merges all eventsources of the view
-    ::validation-rule-set {}  ; rule set for validation
-    ::validation-results {}})) ; current validation results
-
-
-(defn- connect-handlers!
-  "Subscribes all functions from the handler-fns map to the event sources in v."
-  [view-sig]
-  (doseq [[[comp-path evtsource-key] f] (-> view-sig r/getv ::handler-fns)]
-    (install-event-handler! view-sig f comp-path evtsource-key))
-  view-sig)
-
-
-(defn- connect-handler!
-  "Merges all eventsources of the view into one single eventsource,
-   assocs this with key ::eventsource into the view and registers f
-   as listener to the aggregating eventsource."
-  [view-sig f]
-  (let [events (all-events view-sig)
-        evtsource (r/eventsource)
-        react-fn (fn react-fn [occ]
-                   (execute-event-handler! view-sig f occ)
-                   #_(let [result (execute-event-handler! view-sig f occ)]
-                     (when (= (::state result) :quit)
-                       (r/unsubscribe events evtsource))
-                     (r/raise-event! evtsource result)))]
-    (update! view-sig ::eventsource events)
-    (r/subscribe events evtsource react-fn)
-    view-sig))
+  (r/signal (view spec)))
 
 
 (defn start!
   "Builds and connects all parts of a view.
-   The view-sig is registered in the view-signals map using
-   the name of the toplevel spec describing the view."
-  ([view-sig]
-     (start! view-sig (fn [view evt] view)))
-  ([view-sig f]
-     (let [spec (-> view-sig r/getv ::spec)
-           vc (build spec)]
-       (swap! view-signals assoc (:name spec) view-sig)
-       (-> view-sig
-           (update! ::vc vc
-                    ::comp-map (cmap vc))
-           (connect-handler! f)
-           update-to-view!
-           install-validation!))))
+  The view-sig is registered in the view-signals map using
+  the name of the toplevel spec describing the view."
+  [view-sig]
+  (let [spec (-> view-sig r/getv ::spec)
+        vc (build spec)]
+    (-> view-sig
+        (update! ::vc vc
+                 ::comp-map (cmap vc)
+                 ::all-views (all-views))
+        install-handler!
+        update-to-view!
+        install-validation!)
+    (swap! view-signals assoc (:name spec) view-sig)
+    view-sig))
 
 
 (defn preview
   "Builds and displays the specification of visual components.
-   Returns a view signal.
-   Intended for use in REPL for rapid prototyping."
+  Returns a view signal.
+  Intended for use in REPL for rapid prototyping."
   [spec]
   (let [window-spec (if (metam.core/metatype? :visuals.forml/window spec)
                       spec

@@ -14,6 +14,9 @@
 ;; Event translation
 
 (defn event-spec
+  "Returns a vector of component names, last item is a 
+  keyword denoting the type of event, for example 
+  [\"Preview: Content\" \"Actions\" \"Add Item\" :action]"
   [comp-map event]
   (let [component (.getSource event)
         comp-path (->> comp-map

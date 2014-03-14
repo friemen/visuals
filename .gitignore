@@ -15,3 +15,5 @@
 .project
 .classpath
 
+/javafx/.lein-repl-history
+/javafx/.nrepl-port

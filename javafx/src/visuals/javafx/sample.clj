@@ -37,26 +37,25 @@
                                                     :selected ["Items" :selected])))
 
 
-;; Add action method to :action eventsource of a button
-#_(v/install-event-handler!
-   vs
-   (fn [view evt]
-     (update-in view [::v/ui-state :items] #(conj % (str "NEW " (count %)))))
-   "Add Item"
-   :action)
+(defn handler
+  [view evt]
+  (println (v/event-matches? evt ["Add Item" :action]))
+  (condp v/event-matches? evt
+    ["Add Item" :action]
+    (update-in view [::v/ui-state :items] #(conj % (str "NEW " (count %))))
+    
+    ["Remove Items" :action]
+    (let [{items :items s :selected} (::v/ui-state view)]
+      (assoc-in view [::v/ui-state :items]
+                (->> items
+                     (map vector (range))
+                     (remove #((set s) (first %)))
+                     (map second)
+                     vec)))))
 
-#_(v/install-event-handler!
-   vs
-   (fn [view evt]
-     (let [{items :items s :selected} (::v/ui-state view)]
-       (assoc-in view [::v/ui-state :items]
-                 (->> items
-                      (map vector (range))
-                      (remove #((set s) (first %)))
-                      (map second)
-                      vec))))
-   "Remove Item"
-   :action)
+;; Add action method to :action eventsource of a button
+#_(v/install-handler! vs #'s/handler)
+
 
 
 
