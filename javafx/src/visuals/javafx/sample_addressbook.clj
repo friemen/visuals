@@ -81,7 +81,10 @@
 
 (defn details-view
   [address]
-  (v/view (f/window "Details" :content details-panel)
+  (v/view (f/window "Details"
+                    :content details-panel
+                    :modality :window
+                    :owner "Addressbook")
           ::v/domain-data-mapping
           (v/mapping :name  ["Name" :text]
                    :street  ["Street" :text]

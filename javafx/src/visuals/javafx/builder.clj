@@ -1,9 +1,12 @@
 (ns visuals.javafx.builder
   "JavaFX UI Builder"
   (:require [visuals.forml :as f]
-            [metam.core :as m])
-  (:use [visuals.javafx reactor utils]
-        [visuals.utils :only [first-upper]])
+            [metam.core :as m]
+            [visuals.utils :refer [first-upper dump]]
+            [visuals.core :as v]
+            [reactor.core :as r]
+            [visuals.javafx.reactor :refer :all]
+            [visuals.javafx.utils :refer :all])
   (:import [javafx.scene.control Button CheckBox ChoiceBox Label ListView
                                  RadioButton TableView TableColumn TextField
                                  ToggleGroup]
@@ -214,6 +217,7 @@
     component))
 
 
+
 (defn- make-stage
   "Returns either the root stage if it wasn't already initialized with a scene,
    or a new stage that is owned by the root stage, or an explicitly specified
@@ -222,9 +226,15 @@
   (let [root-stage (root-window)]
     (if (-> root-stage .getScene)
       (doto (Stage.)
-        (.initOwner (if-let [owner (:owner spec)]
-                      owner
-                      root-stage))
+        (.initOwner (dump "using owner"
+                          (if-let [owner (some-> v/view-signals
+                                                 deref
+                                                 (get (:owner spec))
+                                                 r/getv
+                                                 ::v/vc)]
+                            owner
+                            root-stage)
+                          #(.getTitle %)))
         (.initModality (case (:modality spec)
                          :window Modality/WINDOW_MODAL
                          :application Modality/APPLICATION_MODAL

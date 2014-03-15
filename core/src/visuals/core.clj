@@ -283,12 +283,17 @@
   The current view state is returned."
   [view-sig f occ]
   (dump (str "calling event-handler " f " for") (dissoc (:event occ) ::payload))
-  (let [view (-> view-sig update-from-view! r/getv)
-        new-view ((deref-fn f) view (:event occ))]
-    (when (valid-view? new-view)
-      (r/setv! view-sig new-view)
-      (update-to-view! view-sig))
-    view-sig))
+  (try 
+    (let [view (-> view-sig update-from-view! r/getv)
+          new-view ((deref-fn f) view (:event occ))]
+      (when (valid-view? new-view)
+        (r/setv! view-sig new-view)
+        (update-to-view! view-sig))
+      view-sig)
+    (catch Exception ex
+      (do (dump "exception caught" ex)
+          (.printStackTrace ex)
+          view-sig))))
 
 
 (defn install-handler!
@@ -479,7 +484,9 @@
 (defn pass-to
   "Passes the view or the message to the view specified by to-view-spec-name
   by enqueuing an event into ::pending-events"
-  ([view to-view-spec-name]
-     (pass-to view to-view-spec-name view))
-  ([view to-view-spec-name msg]
-     (update-in view [::pending-events] conj (event (-> view ::spec :name) to-view-spec-name msg))))
+  ([view spec-name-of-target-view]
+     (pass-to view spec-name-of-target-view view))
+  ([view spec-name-of-target-view msg]
+     (update-in view [::pending-events]
+                conj (event (-> view ::spec :name) spec-name-of-target-view msg))))
+

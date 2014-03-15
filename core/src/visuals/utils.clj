@@ -38,9 +38,11 @@
 
 (defn dump
   "Logs a DEBUG text to the console and returns the value v."
-  [mark v]
-  (println "DEBUG" mark v)
-  v)
+  ([comment expr]
+     (dump comment expr identity))
+  ([comment expr f]
+     (println "DEBUG" comment (f expr))
+     expr))
 
 
 (defn before
