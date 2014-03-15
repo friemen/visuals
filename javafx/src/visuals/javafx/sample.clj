@@ -36,6 +36,7 @@
 
 
 ;; Specify panel and event handler
+
 (def spec
   (f/panel "Content" :lygeneral "flowy"
            :components
@@ -43,7 +44,7 @@
             (f/panel "Actions" :lygeneral "nogrid, ins 0"
                      :components
                      [(f/button "Add Item")
-                              
+                      (f/button "NEW")        
                       (f/button "Remove Items")])]))
 
 (defn handler
@@ -63,6 +64,8 @@
     view))
 
 
+;; You can reevaluate spec or handler.
+;; The preview window immediately reflects the changes.
 
 
 

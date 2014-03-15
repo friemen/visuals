@@ -282,18 +282,19 @@
   The result of f is set as new view state into the view-sig.
   The current view state is returned."
   [view-sig f occ]
-  (dump (str "calling event-handler " f " for") (dissoc (:event occ) ::payload))
-  (try 
-    (let [view (-> view-sig update-from-view! r/getv)
-          new-view ((deref-fn f) view (:event occ))]
-      (when (valid-view? new-view)
-        (r/setv! view-sig new-view)
-        (update-to-view! view-sig))
-      view-sig)
-    (catch Exception ex
-      (do (dump "exception caught" ex)
-          (.printStackTrace ex)
-          view-sig))))
+  (when f
+    (dump (str "calling event-handler " f " for") (dissoc (:event occ) ::payload))
+    (try 
+      (let [view (-> view-sig update-from-view! r/getv)
+            new-view ((deref-fn f) view (:event occ))]
+        (when (valid-view? new-view)
+          (r/setv! view-sig new-view)
+          (update-to-view! view-sig))
+        view-sig)
+      (catch Exception ex
+        (do (dump "exception caught" ex)
+            (.printStackTrace ex)
+            view-sig)))))
 
 
 (defn install-handler!
@@ -303,7 +304,7 @@
   If f-or-derefable is omitted it is lookup up with ::handler-fn 
   in view-sig."
   ([view-sig]
-     (install-handler! view-sig (::handler-fn (r/getv view-sig))))
+     (install-handler! view-sig (-> view-sig r/getv ::handler-fn)))
   ([view-sig f-or-derefable]
      (let [events (all-events view-sig)
            react-fn (fn react-fn [occ]
@@ -372,7 +373,7 @@
               ::domain-data-mapping [] ; mapping between signals and business domain data
               ::ui-state {} ; relevant components ui state (enabled, editable, visible and others)
               ::ui-state-mapping [] ; mapping between signals and ui state data
-              ::handler-fn (fn [view evt] view) ; event handler function or a derefable containing fn
+              ::handler-fn nil ; event handler function or a derefable containing fn
               ::eventsource nil ; eventsource that merges all eventsources of the view
               ::validation-rule-set {}  ; rule set for validation
               ::validation-results {}   ; current validation results
