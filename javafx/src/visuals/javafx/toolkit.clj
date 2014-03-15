@@ -13,43 +13,42 @@
 
 ;; Event translation
 
-(defn event-spec
-  "Returns a vector of component names, last item is a 
-  keyword denoting the type of event, for example 
-  [\"Preview: Content\" \"Actions\" \"Add Item\" :action]"
-  [comp-map event]
-  (let [component (.getSource event)
+(defn- make-event
+  "Returns a vector of component names, for example 
+  [\"Preview: Content\" \"Actions\" \"Add Item\"]"
+  [comp-map evt actionkey]
+  (let [component (.getSource evt)
         comp-path (->> comp-map
                        (filter #(= component (second %)))
                        ffirst
                        vec)]
-    comp-path))
+    (event (conj comp-path actionkey) nil nil)))
 
 
 (defmulti translate
-  (fn [comp-map event]
-    (class event)))
+  (fn [comp-map evt]
+    (class evt)))
 
 
 (defmethod translate :default
-  [comp-map event]
-  (event-spec comp-map event))
+  [comp-map evt]
+  (make-event comp-map evt :unknown))
 
 
 (defmethod translate ActionEvent
-  [comp-map event]
-  (conj (event-spec comp-map event) :action))
+  [comp-map evt]
+  (make-event comp-map evt :action))
 
 
 (defmethod translate WindowEvent
-  [comp-map event]
-  (conj (event-spec comp-map event)
-    (condp = (.getEventType event) 
-      WindowEvent/WINDOW_CLOSE_REQUEST :close
-      WindowEvent/WINDOW_SHOWN :shown
-      WindowEvent/WINDOW_HIDDEN :hidden
-      WindowEvent/WINDOW_SHOWING :showing
-      WindowEvent/WINDOW_HIDING :hiding)))
+  [comp-map evt]
+  (make-event comp-map evt
+               (condp = (.getEventType evt)
+                 WindowEvent/WINDOW_CLOSE_REQUEST :close
+                 WindowEvent/WINDOW_SHOWN :shown
+                 WindowEvent/WINDOW_HIDDEN :hidden
+                 WindowEvent/WINDOW_SHOWING :showing
+                 WindowEvent/WINDOW_HIDING :hiding)))
 
 
 ;; Toolkit implementation for JavaFX

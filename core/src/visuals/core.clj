@@ -19,6 +19,8 @@
   (signals [vc]))
 
 
+
+
 ;; ----------------------------------------------------------------------------
 (defonce toolkit nil)
 
@@ -259,6 +261,10 @@
     (to-components! (::ui-state-mapping view-map)
                     comp-map
                     ui-state)
+    (doseq [evt (::pending-events view-map)]
+      (when-let [es (->> evt ::eventtarget (get @view-signals) r/getv ::eventsource)]
+        (r/raise-event! es evt)))
+    (update! view-sig ::pending-events [])
     view-sig))
 
 
@@ -276,6 +282,7 @@
   The result of f is set as new view state into the view-sig.
   The current view state is returned."
   [view-sig f occ]
+  (dump (str "calling event-handler " f " for") (dissoc (:event occ) ::payload))
   (let [view (-> view-sig update-from-view! r/getv)
         new-view ((deref-fn f) view (:event occ))]
     (when (valid-view? new-view)
@@ -362,6 +369,7 @@
               ::eventsource nil ; eventsource that merges all eventsources of the view
               ::validation-rule-set {}  ; rule set for validation
               ::validation-results {}   ; current validation results
+              ::pending-events []
               ::all-views {}}))); a map from name of the root element of spec to the view  
 
 
@@ -418,30 +426,22 @@
      result#))
 
 
+(defn event
+  "Returns an event map from the given arguments."
+  [sourcepath target payload]
+  {::sourcepath (as-vector sourcepath)
+   ::eventtarget target
+   ::payload payload})
+
+
 (defn event-matches?
-  "Returns true, if event-spec is a suffix of evt, for example
-   (event-matches? [Add :action] [Actions Add :action]) yields true, but
-   (event-matches? [Add :action] [Edit :action]) yields false."
-  [evt event-spec]
-  (every? true? (map = (reverse event-spec) (reverse evt))))
-
-
-(defn- events-meta
-  [var]
-  (when-let [a (-> var meta :events)]
-    (vector a (var-get var))))
-
-
-(defn event-handler-fns
-  "Returns a map of eventsource paths to functions within the namespace ns
-   that have meta data :action attached."
-  [ns]
-  (->> ns
-       ns-map
-       vals
-       (map events-meta)
-       (remove nil?)
-       (into {})))
+  "Returns true, if path is a suffix of (::sourcepath evt), for example
+   (event-matches? [Add :action] {::sourcepath [Actions Add :action]}) yields true, but
+   (event-matches? [Add :action] {::sourcepath [Edit :action]}) yields false."
+  [path evt]
+  (let [sourcepath (::sourcepath evt)]
+    (and (>= (count sourcepath) (count path))
+         (every? true? (map = (reverse sourcepath) (reverse path))))))
 
 
 (def ^:private mapping-parser
@@ -460,3 +460,26 @@
   (p/parse mapping-parser args))
 
 
+(defn close
+  "Removes this view from ::all-views. This will hide the visual component
+  upon update-to-view."
+  [view]
+  (if (valid-view? view)
+    (update-in view [::all-views] dissoc (-> view ::spec :name))
+    view))
+
+
+(defn create
+  "Adds another view to ::all-views. Upon update-to-view this will create 
+  a new visual component from the ::spec and make it visible."
+  [view other-view]
+  (assoc-in view [::all-views (-> other-view ::spec :name)] other-view))
+
+
+(defn pass-to
+  "Passes the view or the message to the view specified by to-view-spec-name
+  by enqueuing an event into ::pending-events"
+  ([view to-view-spec-name]
+     (pass-to view to-view-spec-name view))
+  ([view to-view-spec-name msg]
+     (update-in view [::pending-events] conj (event (-> view ::spec :name) to-view-spec-name msg))))

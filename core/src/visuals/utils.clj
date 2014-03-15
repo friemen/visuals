@@ -21,6 +21,7 @@
 
 
 (defn first-upper
+  "Returns string s with the first char in uppercase."
   [s]
   (if (s/blank? s)
     ""
@@ -28,6 +29,7 @@
 
 
 (defn first-lower
+  "Returns string s with the first char in uppercase."
   [s]
   (if (s/blank? s)
     ""

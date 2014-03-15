@@ -70,9 +70,12 @@
   [view evt]
   (condp v/event-matches? evt
     ["Ok" :action]
-    (assoc-in view [::v/domain-data :city] "DUCKBERG")
+    (-> view
+        (assoc-in [::v/domain-data :city] "DUCKBERG")
+        (v/pass-to "Addressbook")
+        v/close)
     ["Cancel" :action]
-    (update-in view [::v/all-views] dissoc (-> view ::v/spec :name))
+    (v/close view)
     view))
 
 
@@ -115,11 +118,19 @@
   (condp v/event-matches? evt
     ["Edit" :action]
     (if-let [sel-index (-> view ::v/ui-state :selected first)]
-      (let [address (-> view ::v/domain-data :addresses (nth sel-index))
-            v (details-view address)]
-        (assoc-in view [::v/all-views "Details"] v)))
+      (let [address (-> view
+                        ::v/domain-data :addresses
+                        (nth sel-index)
+                        (assoc :id sel-index))]
+        (v/create view (details-view address))))
     ["Add" :action]
-    (assoc-in view [::v/all-views "Details"] (details-view {}))
+    (v/create view (details-view {}))
+    ["Details"]
+    (let [address (-> evt ::v/payload ::v/domain-data)]
+      (assoc-in view [::v/domain-data :addresses]
+                (if-let [index (:id address)]
+                  (swap! addresses assoc index address)
+                  (swap! addresses conj address))))
     view))
 
 
