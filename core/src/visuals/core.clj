@@ -308,7 +308,9 @@
      (let [events (all-events view-sig)
            react-fn (fn react-fn [occ]
                       (execute-event-handler! view-sig f-or-derefable occ))]
-       (update! view-sig ::eventsource events)
+       (update! view-sig
+                ::eventsource events
+                ::handler-fn f-or-derefable)
        (r/subscribe events nil react-fn)
        view-sig)))
 

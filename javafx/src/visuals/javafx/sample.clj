@@ -18,16 +18,9 @@
            '[visuals.forml :as f])
 
 
-;; Define and show panel
-#_(def vs (v/preview
-           (f/panel "Content" :lygeneral "flowy"
-                    :components
-                    [(f/listbox "Items")
-                     (f/panel "Actions" :lygeneral "nogrid, ins 0"
-                              :components
-                              [(f/button "Add Item")
-                               (f/button "Remove Items")])])))
-
+;; Shows panel preview, whenever you reeavaluate the spec var
+;; the preview is updated accordingly 
+#_(def vs (v/preview #'s/spec))
 
 ;; Add data to the list
 #_(-> vs (v/signal "Items" :items) (r/setv! ["Foo" "Bar" "Baz"]))
@@ -36,13 +29,28 @@
 #_(-> vs (v/update! ::v/ui-state-mapping (v/mapping :items ["Items" :items]
                                                     :selected ["Items" :selected])))
 
+;; Install event handler
+#_(v/install-handler! vs #'s/handler)
+
+
+
+
+;; Specify panel and event handler
+(def spec
+  (f/panel "Content" :lygeneral "flowy"
+           :components
+           [(f/listbox "Items")
+            (f/panel "Actions" :lygeneral "nogrid, ins 0"
+                     :components
+                     [(f/button "Add Item")
+                              
+                      (f/button "Remove Items")])]))
 
 (defn handler
   [view evt]
-  (println (v/event-matches? evt ["Add Item" :action]))
   (condp v/event-matches? evt
     ["Add Item" :action]
-    (update-in view [::v/ui-state :items] #(conj % (str "NEW " (count %))))
+    (update-in view [::v/ui-state :items] #(conj % (str "New " (count %))))
     
     ["Remove Items" :action]
     (let [{items :items s :selected} (::v/ui-state view)]
@@ -51,10 +59,9 @@
                      (map vector (range))
                      (remove #((set s) (first %)))
                      (map second)
-                     vec)))))
+                     vec)))
+    view))
 
-;; Add action method to :action eventsource of a button
-#_(v/install-handler! vs #'s/handler)
 
 
 
