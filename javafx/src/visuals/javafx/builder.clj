@@ -220,8 +220,8 @@
 
 (defn- make-stage
   "Returns either the root stage if it wasn't already initialized with a scene,
-   or a new stage that is owned by the root stage, or an explicitly specified
-   owner."
+  or a new stage that is owned by the root stage, or an explicitly specified
+  owner."
   [spec]
   (let [root-stage (root-window)]
     (if (-> root-stage .getScene)

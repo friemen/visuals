@@ -11,6 +11,7 @@
 
 
 (defn invoke
+  "Reflectively invoke an objects method and returns its result."
   ([instance methodname]
      (invoke instance methodname nil []))
   ([instance methodname parameter-types parameter-values]
@@ -84,7 +85,7 @@
 
 (defn into-list!
   "Synchronizes list with xs, so that list is changed by single 
-   removals/insertions until it contains all of xs items."
+  removals/insertions until it contains all of xs items."
   [list xs]
   (let [{removals :- inserts :+} (diff list xs)]
     (doseq [[v i] (reverse removals)]

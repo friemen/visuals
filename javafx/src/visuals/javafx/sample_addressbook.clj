@@ -63,7 +63,7 @@
             (f/textfield "Birthday")
             (f/panel "Actions" :lygeneral "nogrid, ins 0"
                      :components
-                     [(f/button "Ok" :text "OK" :icon "tick")
+                     [(f/button "Ok" :text "Save" :icon "tick")
                       (f/button "Cancel" :icon "cross")])]))
 
 (defn details-handler
@@ -87,10 +87,10 @@
                     :owner "Addressbook")
           ::v/domain-data-mapping
           (v/mapping :name  ["Name" :text]
-                   :street  ["Street" :text]
-                   :zipcode ["Zipcode" :value]
-                   :city    ["City" :text]
-                   :age     ["Birthday" :text]  pf/format-date pf/parse-date)
+                     :street  ["Street" :text]
+                     :zipcode ["Zipcode" :value]
+                     :city    ["City" :text]
+                     :age     ["Birthday" :text]  pf/format-date pf/parse-date)
           ::v/domain-data
           address
           ::v/ui-state-mapping

@@ -2,7 +2,8 @@
   "JavaFX reactive implementations"
   (:require [reactor.core :as react]
             [visuals.core :as v]
-            [visuals.utils :refer :all]))
+            [visuals.utils :refer :all])
+  (:import reactor.core.EventSource))
 
 
 (defrecord PropertyBasedSignal [propname property clmap-atom updated-atom] 
@@ -172,15 +173,11 @@
   "Creates an eventsource that is filled by an event handler implementation. The
    event handler is registered with the given visual component."
   [{component :component key :key propname :propname}]
-  (if-let [eh (invoke component (str "get" (first-upper propname)))]
-    (if (satisfies? reactor.core.EventSource eh)
-      eh
-      (throw (IllegalStateException. (str "Event handler already bound for " propname ": " eh))))
-    (let [newes (react/eventsource key v/ui-thread)
-          eh (reify javafx.event.EventHandler
-               (handle [_ evt]
-                 (dump "event raised" (react/raise-event! newes evt))))]
-      (invoke component (str "set" (first-upper propname)) [javafx.event.EventHandler] [eh])
-      newes)))
+  (let [newes (react/eventsource key v/ui-thread)
+        eh (reify javafx.event.EventHandler
+             (handle [_ evt]
+               (dump "event raised" (react/raise-event! newes evt))))]
+    (invoke component (str "set" (first-upper propname)) [javafx.event.EventHandler] [eh])
+    newes))
 
 

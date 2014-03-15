@@ -404,26 +404,35 @@
 
 
 (defn preview
-  "Builds and displays the specification of visual components.
-  Returns a view signal.
-  Intended for use in REPL for rapid prototyping."
-  [spec]
-  (let [window-spec (if (metam.core/metatype? :visuals.forml/window spec)
-                      spec
-                      (visuals.forml/window (str "Preview: " (:name spec)) :content spec))]
-    (-> (if-let [view-sig (get @view-signals (:name window-spec))]
-          (assoc window-spec :into (-> view-sig r/getv ::vc))
-          window-spec)
-        view-signal
-        start!
-        show!
-        run-now)))
+  "Builds and displays visual components in a preview window.
+  Intended for use in REPL for rapid prototyping.
+  Argument can be a spec or a var (or other ref type). In the
+  latter case a :preview listener is added using add-watch.
+  Upon a new def evaluation the window contents is recreated. 
+  Returns a view signal."
+  [spec-or-derefable]
+  (let [listener-fn (fn [_ _ _ spec]
+                      (let [window-spec (if (metam.core/metatype? :visuals.forml/window spec)
+                                          spec
+                                          (visuals.forml/window (str "Preview: " (:name spec)) :content spec))]
+                        (run-now (-> (if-let [view-sig (get @view-signals (:name window-spec))]
+                                       (-> view-sig
+                                           (update! ::spec (assoc window-spec :into (-> view-sig r/getv ::vc))))
+                                       (-> window-spec
+                                           view-signal))
+                                     start!
+                                     show!))))
+        spec (if (instance? clojure.lang.IDeref spec-or-derefable)
+               (do (add-watch spec-or-derefable :preview listener-fn)
+                   (deref spec-or-derefable))
+               spec-or-derefable)]
+    (listener-fn nil nil nil spec)))
 
 
 (defmacro modify!
   "Executes the given forms in UI thread and updates the ::comp-map of
-   the view.
-   Intended for use in REPL for rapid prototyping."
+  the view.
+  Intended for use in REPL for rapid prototyping."
   [view-sig & forms]
   `(let [view# (r/getv ~view-sig)
          result# (v/run-now ~@forms)]
@@ -441,8 +450,8 @@
 
 (defn event-matches?
   "Returns true, if path is a suffix of (::sourcepath evt), for example
-   (event-matches? [Add :action] {::sourcepath [Actions Add :action]}) yields true, but
-   (event-matches? [Add :action] {::sourcepath [Edit :action]}) yields false."
+  (event-matches? [Add :action] {::sourcepath [Actions Add :action]}) yields true, but
+  (event-matches? [Add :action] {::sourcepath [Edit :action]}) yields false."
   [path evt]
   (let [sourcepath (::sourcepath evt)]
     (and (>= (count sourcepath) (count path))
@@ -458,9 +467,9 @@
 
 (defn mapping
   "Returns a sequence of mappings from data path to signal path,
-   with optional formatter and parser. Example usage:
-   (v/mapping :name    [\"Name\" :text]
-              :age     [\"Birthday\" :text] pf/format-date pf/parse-date)"
+  with optional formatter and parser. Example usage:
+  (v/mapping :name    [\"Name\" :text]
+             :age     [\"Birthday\" :text] pf/format-date pf/parse-date)"
   [& args]
   (p/parse mapping-parser args))
 
@@ -489,4 +498,3 @@
   ([view spec-name-of-target-view msg]
      (update-in view [::pending-events]
                 conj (event (-> view ::spec :name) spec-name-of-target-view msg))))
-

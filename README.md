@@ -36,8 +36,9 @@ answers to the following questions:
 A *Spec* is a textual model of a GUI form. An example looks like this:
 
 ```clojure
-(def p (f/panel "P" :lygeneral "wrap 2" :components [
-            (f/textfield "Name")
+(def details-panel
+  (f/panel "Address Details" :lygeneral "wrap 2" :components
+           [(f/textfield "Name")
             (f/textfield "Street")
             (f/dropdownlist "Zipcode")
             (f/textfield "City")
@@ -60,12 +61,15 @@ a matching component.
 A *Signal* is a time-varying value, or -- in Java terms -- a mutable property. Properties of
 visual components are accessible through the Signal protocol (see reactor.core).
 
-An *Event Source* is a stream of events (more precisely: pairs of timestamp and value, a.k.a occurences).
-For example button presses or changes of signals can be represented by event sources (see reactor.core).
+An *Event* is a map:
+ - ::sourcepath -- A component path and a conjoined keyword denoting the cause of the event.
+ - ::eventtarget -- The name of the spec root used for delivering the event to the correct event handler.
+ - ::payload -- An arbitrary value.
+
+An *Event Source* is a stream of occurences. An occurence is a pair of timestamp and event.
+For example button presses or changes of signals can be represented by events (see reactor.core).
 
 A *Signal Path* is a pair of component path and keyword representing the signal.
-
-An *Event Source Path* is a pair of component path and keyword representing the eventsource.
 
 A *View* represents the current state of a visual component tree as a map.
 The map contains the following keys (all in visuals.core namespace):
@@ -77,24 +81,28 @@ The map contains the following keys (all in visuals.core namespace):
  - ::domain-data-mapping -- A vector of mappings between signals and business domain data.
  - ::ui-state -- A map with the UI state of visual components like enabled, editable, visible etc.
  - ::ui-state-mapping -- A vector of mappings between signals and ui state data.
- - ::action-fns -- A map of eventsource paths to action functions.
+ - ::handler-fn -- The single handler function, which accepts the view and the event.
+ - ::eventsource -- An event source that merges all events.
  - ::validation-rule-set -- A map with the set of constraints for validation.
  - ::validation-results -- A map of the current validation results.
+ - ::pending-events -- A vector of events that will be delivered upon next sync with the UI.
+ - ::all-views -- A map of all other visible views. The :name of the root spec is used as key.
 
 The distinction between *domain data* and *UI state* is somewhat arbitrary. The idea is that domain data
 holds the business related data as actually used in the domain layer of the system. UI state is then
 all additional data that has a meaning only in the UI layer. The mappings between visual components
 are kept in the corresponding -mapping slots of the view map.
 
-*Action functions* are single-arg fns that receive the view map and return the view map. They can be 
-retrieved from namespaces and linked automatically to event sources if they carry a path to an event 
-source as :action meta data like in 
+An *Event Handler* is a function that handles all events for a view. It takes two
+arguments: the view (see below) and the event (see above). It returns a new version of the
+view.
 
 ```clojure
-(defn ^{:action ["Ok" :onAction]} ok 
-  [view] 
+(defn details-handler 
+  [view evt] 
   view)
 ```
+
 
 ## API overview
 
@@ -120,8 +128,6 @@ Visuals consists of distinct parts, some of which are independent libraries:
 
 ## Next Todos
 
- - Automatic rule execution on change of business data.
- - Open other window (modal and non-modal), but keep side effect out of action
  - Add editable table
  - Add tree
  - Make validation error display nicer.
@@ -129,6 +135,6 @@ Visuals consists of distinct parts, some of which are independent libraries:
 
 ## License
 
-Copyright 2013 F.Riemenschneider
+Copyright 2013,2014 F.Riemenschneider
 
 Distributed under the Eclipse Public License, the same as Clojure.
