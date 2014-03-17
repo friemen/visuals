@@ -13,9 +13,14 @@
 
 ;; Event translation
 
+(defmulti translate
+  "Takes a JavaFX event and returns an event map."
+  (fn [comp-map evt]
+    (class evt)))
+
 (defn- make-event
-  "Returns a vector of component names, for example 
-  [\"Preview: Content\" \"Actions\" \"Add Item\"]"
+  "Returns a vector of component names conjoined with an action key, 
+  for example [\"Preview: Content\" \"Actions\" \"Add Item\" :action]"
   [comp-map evt actionkey]
   (let [component (.getSource evt)
         comp-path (->> comp-map
@@ -23,11 +28,6 @@
                        ffirst
                        vec)]
     (event (conj comp-path actionkey) nil nil)))
-
-
-(defmulti translate
-  (fn [comp-map evt]
-    (class evt)))
 
 
 (defmethod translate :default

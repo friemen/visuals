@@ -44,7 +44,6 @@
             (f/panel "Actions" :lygeneral "nogrid, ins 0"
                      :components
                      [(f/button "Add Item")
-                      (f/button "NEW")        
                       (f/button "Remove Items")])]))
 
 (defn handler

@@ -37,13 +37,17 @@ A *Spec* is a textual model of a GUI form. An example looks like this:
 
 ```clojure
 (def details-panel
-  (f/panel "Address Details" :lygeneral "wrap 2" :components
+  (f/panel "Details" :lygeneral "wrap 2"
+           :components
            [(f/textfield "Name")
             (f/textfield "Street")
             (f/dropdownlist "Zipcode")
             (f/textfield "City")
             (f/textfield "Birthday")
-            (f/button "Ok" :text "OK" :lyhint "skip")]))
+            (f/panel "Actions" :lygeneral "nogrid, ins 0"
+                     :components
+                     [(f/button "Ok" :text "Save" :icon "tick")
+                      (f/button "Cancel" :icon "cross")])]))(def details-panel
 ```
 
 A *Toolkit* provides the technical infrastructure and components.
@@ -69,6 +73,24 @@ An *Event* is a map:
 An *Event Source* is a stream of occurences. An occurence is a pair of timestamp and event.
 For example button presses or changes of signals can be represented by events (see reactor.core).
 
+An *Event Handler* is a function that handles all events for a view. It takes two
+arguments: the view (see below) and the event (see above). It returns a new version of the
+view, for example:
+
+```clojure
+(defn details-handler
+  [view evt]
+  (condp v/event-matches? evt
+    ["Ok" :action]
+    (-> view
+        (assoc-in [::v/domain-data :city] "DUCKBERG")
+        (v/pass-to "Addressbook")
+        v/close)
+    ["Cancel" :action]
+    (v/close view)
+    view))
+```
+
 A *Signal Path* is a pair of component path and keyword representing the signal.
 
 A *View* represents the current state of a visual component tree as a map.
@@ -88,20 +110,36 @@ The map contains the following keys (all in visuals.core namespace):
  - ::pending-events -- A vector of events that will be delivered upon next sync with the UI.
  - ::all-views -- A map of all other visible views. The :name of the root spec is used as key.
 
+A view is created like this:
+```clojure
+(defn details-view
+  [address]
+  (v/view (f/window "Details"
+                    :content details-panel
+                    :modality :window
+                    :owner "Addressbook")
+          ::v/domain-data-mapping
+          (v/mapping :name    ["Name" :text]
+                     :street  ["Street" :text]
+                     :zipcode ["Zipcode" :value]
+                     :city    ["City" :text]
+                     :age     ["Birthday" :text]  pf/format-date pf/parse-date)
+          ::v/domain-data
+          address
+          ::v/ui-state-mapping
+          (v/mapping :zipcodes ["Zipcode" :items])
+          ::v/ui-state
+          {:zipcodes ["12345" "53113" "4711"]}
+          ::v/validation-rule-set
+          (e/rule-set :name c/required (c/min-length 3)
+                      :age c/not-blank? c/is-date)
+          ::v/handler-fn #'details-handler))
+```
+
 The distinction between *domain data* and *UI state* is somewhat arbitrary. The idea is that domain data
 holds the business related data as actually used in the domain layer of the system. UI state is then
 all additional data that has a meaning only in the UI layer. The mappings between visual components
 are kept in the corresponding -mapping slots of the view map.
-
-An *Event Handler* is a function that handles all events for a view. It takes two
-arguments: the view (see below) and the event (see above). It returns a new version of the
-view.
-
-```clojure
-(defn details-handler 
-  [view evt] 
-  view)
-```
 
 
 ## API overview
@@ -126,11 +164,18 @@ Visuals consists of distinct parts, some of which are independent libraries:
    (part of visuals.core namespace, uses [parsargs](https://github.com/friemen/parsargs))
 
 
-## Next Todos
+## Missing features
 
- - Add editable table
- - Add tree
- - Make validation error display nicer.
+ - Event handler invocation upon widget value changes
+ - I18N (labels, parsers, formatters, validation messages)
+ - Editable table
+ - Tree
+ - Datepicker
+ - Tabbed pane
+ - Menus
+ - Message box
+ - Keyboard shortcut definition
+ - Nicer validation error display
 
 
 ## License

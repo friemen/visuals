@@ -86,7 +86,7 @@
                     :modality :window
                     :owner "Addressbook")
           ::v/domain-data-mapping
-          (v/mapping :name  ["Name" :text]
+          (v/mapping :name    ["Name" :text]
                      :street  ["Street" :text]
                      :zipcode ["Zipcode" :value]
                      :city    ["City" :text]
