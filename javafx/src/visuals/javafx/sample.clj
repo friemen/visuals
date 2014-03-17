@@ -27,7 +27,8 @@
 
 ;; Add mapping from listbox items to ::v/ui-state
 #_(-> vs (v/update! ::v/ui-state-mapping (v/mapping :items ["Items" :items]
-                                                    :selected ["Items" :selected])))
+                                                    :selected ["Items" :selected]
+                                                    :newitem ["New item" :text])))
 
 ;; Install event handler
 #_(v/install-handler! vs #'s/handler)
@@ -38,9 +39,10 @@
 ;; Specify panel and event handler
 
 (def spec
-  (f/panel "Content" :lygeneral "flowy"
+  (f/panel "Content" :lygeneral "flowy, fill" :lyrows "[|||grow|]"
            :components
-           [(f/listbox "Items")
+           [(f/textfield "New item" :lyhint "growx")
+            (f/listbox "Items")
             (f/panel "Actions" :lygeneral "nogrid, ins 0"
                      :components
                      [(f/button "Add Item")
@@ -50,7 +52,8 @@
   [view evt]
   (condp v/event-matches? evt
     ["Add Item" :action]
-    (update-in view [::v/ui-state :items] #(conj % (str "New " (count %))))
+    (let [s (get-in view [::v/ui-state :newitem])]
+      (update-in view [::v/ui-state :items] #(conj % s)))
     
     ["Remove Items" :action]
     (let [{items :items s :selected} (::v/ui-state view)]

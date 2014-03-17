@@ -11,7 +11,7 @@
   (subscribe
     [sig follower f]
     (let [l (reify javafx.beans.value.ChangeListener
-              (changed [_ subject old new] (f new)))]
+              (changed [_ subject old new] (f [old new])))]
       (swap! clmap-atom #(assoc % f [l follower]))
       (.addListener property l)))
   (unsubscribe
@@ -44,7 +44,7 @@
   (subscribe
     [sig follower f]
     (let [l (reify javafx.collections.ListChangeListener
-              (onChanged [_ evt] (f (.getList evt))))]
+              (onChanged [_ evt] (f [nil (.getList evt)])))]
       (swap! clmap-atom #(assoc % f [l follower]))
       (.addListener olist l)))
   (unsubscribe
@@ -77,7 +77,7 @@
   (subscribe
     [sig follower f]
     (let [l (reify javafx.collections.ListChangeListener
-              (onChanged [_ evt] (f (.getList evt))))]
+              (onChanged [_ evt] (f [nil (.getList evt)])))]
       (swap! clmap-atom #(assoc % f [l follower]))
       (.addListener (.getSelectedIndices selmodel) l)))
   (unsubscribe
