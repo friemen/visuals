@@ -15,21 +15,9 @@
 
 ;; In the REPL switch to this namespace and load it
 
-;; Define and start view as defined below.
+;; Start the Addressbook
 #_(def master (-> (master-view) v/start-initial-view!))
-;; The var view-sig holds the immutable map that represents a View.
 
-
-;; Get value from UI
-#_(-> details (v/signal "City" :text) r/getv)
-
-
-;; Set value into UI
-#_(-> details (v/signal "City" :text) (r/setv! "BAZ"))
-
-
-;; Get event source and trigger an event
-#_(-> details (v/eventsource "Ok" :action) (r/raise-event! nil))
 
 
 ;; test data
