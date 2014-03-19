@@ -52,8 +52,10 @@
   [view evt]
   (condp v/event-matches? evt
     ["Add Item" :action]
-    (let [s (get-in view [::v/ui-state :newitem])]
-      (update-in view [::v/ui-state :items] #(conj % s)))
+    (let [text (get-in view [::v/ui-state :newitem])]
+      (-> view
+          (update-in [::v/ui-state :items] #(conj % text))
+          (assoc-in [::v/ui-state :newitem] "")))
     
     ["Remove Items" :action]
     (let [{items :items s :selected} (::v/ui-state view)]

@@ -6,7 +6,8 @@
             [visuals.forml]
             [examine.core :as e]
             [parsargs.core :as p]
-            [visuals.utils :refer :all]))
+            [visuals.utils :refer :all]
+            [clojure.pprint]))
 
 
 (defprotocol VisualComponent
@@ -108,6 +109,7 @@
       (-> v r/signal start! show!))))
 
 ;; ----------------------------------------------------------------------------
+
 
 (defn cmap
   "Returns a map of component path to visual component by recursively
@@ -265,8 +267,9 @@
          domain-data ::domain-data
          ui-state ::ui-state
          all-views ::all-views} view-map]
-    (close-missing-views! all-views)
-    (start-new-views! all-views)
+    (when all-views
+      (close-missing-views! all-views)
+      (start-new-views! all-views))
     (to-components! (::domain-data-mapping view-map)
                     comp-map
                     domain-data)
@@ -276,7 +279,18 @@
     (doseq [evt (::pending-events view-map)]
       (when-let [es (->> evt ::eventtarget (get @view-signals) r/getv ::eventsource)]
         (r/raise-event! es evt)))
-    (update! view-sig ::pending-events [])
+    (update! view-sig
+             ::pending-events []
+             ::all-views nil)
+    view-sig))
+
+
+(defn- handle-close-event!
+  "Remove the view-sig from global view-signals map if the evt is a :close"
+  [view-sig evt]
+  (let [sourcepath (::sourcepath evt)]
+    (when (and (= 2 (count sourcepath)) (= :close (last sourcepath)))
+      (swap! view-signals dissoc (first sourcepath)))
     view-sig))
 
 
@@ -293,12 +307,12 @@
   The function f is invoked with current view state and the event.
   The result of f is set as new view state into the view-sig.
   The current view state is returned."
-  [view-sig f occ]
+  [view-sig f {evt :event}]
   (when f
-    (dump (str "calling event-handler " f " for") (dissoc (:event occ) ::payload))
+    (dump (str "calling event-handler " f " for") (dissoc evt ::payload))
     (try 
       (let [view (-> view-sig update-from-view! r/getv)
-            new-view ((deref-fn f) view (:event occ))]
+            new-view ((deref-fn f) view evt)]
         (when (valid-view? new-view)
           (r/setv! view-sig new-view)
           (update-to-view! view-sig))
@@ -306,7 +320,8 @@
       (catch Exception ex
         (do (dump "exception caught" ex)
             (.printStackTrace ex)
-            view-sig)))))
+            view-sig))))
+  (handle-close-event! view-sig evt))
 
 
 (defn install-handler!
@@ -418,43 +433,6 @@
     view-sig))
 
 
-(defn preview
-  "Builds and displays visual components in a preview window.
-  Intended for use in REPL for rapid prototyping.
-  Argument can be a spec or a var (or other ref type). In the
-  latter case a :preview listener is added using add-watch.
-  Upon a new def evaluation the window contents is recreated. 
-  Returns a view signal."
-  [spec-or-derefable]
-  (let [listener-fn (fn [_ _ _ spec]
-                      (let [window-spec (if (metam.core/metatype? :visuals.forml/window spec)
-                                          spec
-                                          (visuals.forml/window (str "Preview: " (:name spec)) :content spec))]
-                        (run-now (-> (if-let [view-sig (get @view-signals (:name window-spec))]
-                                       (-> view-sig
-                                           (update! ::spec (assoc window-spec :into (-> view-sig r/getv ::vc))))
-                                       (-> window-spec
-                                           view-signal))
-                                     start!
-                                     show!))))
-        spec (if (instance? clojure.lang.IDeref spec-or-derefable)
-               (do (add-watch spec-or-derefable :preview listener-fn)
-                   (deref spec-or-derefable))
-               spec-or-derefable)]
-    (listener-fn nil nil nil spec)))
-
-
-(defmacro modify!
-  "Executes the given forms in UI thread and updates the ::comp-map of
-  the view.
-  Intended for use in REPL for rapid prototyping."
-  [view-sig & forms]
-  `(let [view# (r/getv ~view-sig)
-         result# (v/run-now ~@forms)]
-     (r/setv! ~view-sig (assoc view# ::comp-map (v/cmap (::vc view#))))
-     result#))
-
-
 (defn event
   "Returns an event map from the given arguments."
   [sourcepath target payload]
@@ -513,3 +491,50 @@
   ([view spec-name-of-target-view msg]
      (update-in view [::pending-events]
                 conj (event (-> view ::spec :name) spec-name-of-target-view msg))))
+
+;; ----------------------------------------------------------------------------
+;; Tools in the REPL
+
+(defn pr-view
+  "Pretty print a view without the spec."
+  [view-sig]
+  (clojure.pprint/pprint (-> view-sig r/getv (dissoc ::spec))))
+
+
+(defn preview
+  "Builds and displays visual components in a preview window.
+  Intended for use in REPL for rapid prototyping.
+  Argument can be a spec or a var (or other ref type). In the
+  latter case a :preview listener is added using add-watch.
+  Upon a new def evaluation the window contents is recreated. 
+  Returns a view signal."
+  [spec-or-derefable]
+  (let [listener-fn (fn [_ _ _ spec]
+                      (let [window-spec (if (metam.core/metatype? :visuals.forml/window spec)
+                                          spec
+                                          (visuals.forml/window (str "Preview: " (:name spec)) :content spec))]
+                        (run-now (-> (if-let [view-sig (get @view-signals (:name window-spec))]
+                                       (-> view-sig
+                                           (update! ::spec (assoc window-spec :into (-> view-sig r/getv ::vc))))
+                                       (-> window-spec
+                                           view-signal))
+                                     start!
+                                     show!))))
+        spec (if (instance? clojure.lang.IDeref spec-or-derefable)
+               (do (add-watch spec-or-derefable :preview listener-fn)
+                   (deref spec-or-derefable))
+               spec-or-derefable)]
+    (listener-fn nil nil nil spec)))
+
+
+(defmacro modify!
+  "Executes the given forms in UI thread and updates the ::comp-map of
+  the view.
+  Intended for use in REPL for rapid prototyping."
+  [view-sig & forms]
+  `(let [view# (r/getv ~view-sig)
+         result# (v/run-now ~@forms)]
+     (r/setv! ~view-sig (assoc view# ::comp-map (v/cmap (::vc view#))))
+     result#))
+
+
