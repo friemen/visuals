@@ -16,7 +16,7 @@
 ;; In the REPL switch to this namespace and load it
 
 ;; Define and start view as defined below.
-#_(def master (v/run-now (start-master!)))
+#_(def master (-> (master-view) v/start-initial-view!))
 ;; The var view-sig holds the immutable map that represents a View.
 
 
@@ -32,8 +32,21 @@
 #_(-> details (v/eventsource "Ok" :action) (r/raise-event! nil))
 
 
+;; test data
 
-;; Description of a UI panel and a window
+(def addresses
+  (atom [{:name "Donald Duck"
+          :street "Upperstr. 15"
+          :zipcode "4711"
+          :city "Duckberg"}
+         {:name "Mickey Mouse"
+          :street "Downstr. 42"
+          :zipcode "4711"
+          :city "Duckberg"}]))
+
+
+
+;; Master form
 
 (def master-panel
   (f/panel "Master" :lygeneral "flowy"
@@ -49,6 +62,36 @@
                      [(f/button "Add")
                       (f/button "Edit")
                       (f/button "Remove")])]))
+
+(declare details-view)
+
+(defn master-handler
+  [view evt]
+  (condp v/event-matches? evt
+    ["Edit" :action]
+    (if-let [sel-index (-> view ::v/ui-state :selected first)]
+      (let [address (-> view
+                        ::v/domain-data :addresses
+                        (nth sel-index)
+                        (assoc :id sel-index))]
+        (v/create view (details-view address))))
+    ["Add" :action]
+    (v/create view (details-view {}))
+    ["Details"]
+    (let [address (-> evt ::v/payload ::v/domain-data)]
+      (assoc-in view [::v/domain-data :addresses]
+                (if-let [index (:id address)]
+                  (swap! addresses assoc index address)
+                  (swap! addresses conj address))))
+    view))
+
+
+(defn master-view []
+  (v/view (f/window "Addressbook" :content master-panel)
+           ::v/domain-data-mapping (v/mapping :addresses ["Addresses" :items])
+           ::v/domain-data {:addresses @addresses}
+           ::v/ui-state-mapping (v/mapping :selected ["Addresses" :selected])
+           ::v/handler-fn #'master-handler))
 
 
 ;; Details form
@@ -101,51 +144,3 @@
           (e/rule-set :name c/required (c/min-length 3)
                       :age c/not-blank? c/is-date)
           ::v/handler-fn #'details-handler))
-
-
-;; test data
-
-(def addresses
-  (atom [{:name "Donald Duck"
-          :street "Upperstr. 15"
-          :zipcode "4711"
-          :city "Duckberg"}
-         {:name "Mickey Mouse"
-          :street "Downstr. 42"
-          :zipcode "4711"
-          :city "Duckberg"}]))
-
-
-(defn master-handler
-  [view evt]
-  (condp v/event-matches? evt
-    ["Edit" :action]
-    (if-let [sel-index (-> view ::v/ui-state :selected first)]
-      (let [address (-> view
-                        ::v/domain-data :addresses
-                        (nth sel-index)
-                        (assoc :id sel-index))]
-        (v/create view (details-view address))))
-    ["Add" :action]
-    (v/create view (details-view {}))
-    ["Details"]
-    (let [address (-> evt ::v/payload ::v/domain-data)]
-      (assoc-in view [::v/domain-data :addresses]
-                (if-let [index (:id address)]
-                  (swap! addresses assoc index address)
-                  (swap! addresses conj address))))
-    view))
-
-
-(defn start-master!
-  []
-  (-> (f/window "Addressbook" :content master-panel)
-      v/view-signal
-      (v/update! ::v/domain-data-mapping (v/mapping :addresses ["Addresses" :items])
-                 ::v/domain-data {:addresses @addresses}
-                 ::v/ui-state-mapping (v/mapping :selected ["Addresses" :selected])
-                 ::v/handler-fn #'master-handler)
-      v/start!
-      v/show!))
-
-

@@ -415,7 +415,7 @@
   (r/signal (view spec)))
 
 
-(defn start!
+(defn- start!
   "Builds and connects all parts of a view.
   The view-sig is registered in the view-signals map using
   the name of the toplevel spec describing the view."
@@ -431,6 +431,13 @@
         install-validation!)
     (swap! view-signals assoc (:name spec) view-sig)
     view-sig))
+
+
+(defn start-initial-view!
+  "Start the root view. Subsequent views are started through
+  adding views to the ::all-views slot of the current view."
+  [view]
+  (-> view r/signal start! show! run-now))
 
 
 (defn event

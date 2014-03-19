@@ -4,32 +4,10 @@ A GUI library based on reactor, metam and JavaFX.
 
 Currently this is purely experimental stuff!
 
-See the [sample](javafx/src/visuals/javafx/sample.clj) to get a first idea.
+See the [sample](javafx/src/visuals/javafx/sample.clj) to get an idea for interactive GUI development.
 
+See the [addressbook](javafx/src/visuals/javafx/sample_addressbook.clj) to get a more complete picture.
 
-## Motivation
-
-The interesting thing about rich clients is that they combine some of the nastiest
-characteristics that programming has to offer:
-
- - UI Toolkits like Swing, JavaFX or others are packed with mutable state. 
- - The layout and configuration of widgets is usually very verbose (or requires
-   the time-consuming use of point-and-click designer tools).
- - Every piece of logic is triggered on the basis of callbacks.
- - Actions that change UI must do so by causing side effects. 
- - To make a UI responsive you have to deal with multi-threading.
- - Testing presentation logic is often very hard if it's mixed up
-   with code that accesses UI. This forces you to employ UI robots and to maintain 
-   brittle test scripts.
-
-To cut it short, there are quite some challenges ahead. This library explores practical
-answers to the following questions:
-
- - Where does functional reactive programming help?
- - Can we really escape callback hell?
- - To what extent can side effects be avoided?
- - How does a concise textual specification of UI look like?
- 
 
 ## Concepts
 
@@ -145,6 +123,31 @@ are kept in the corresponding -mapping slots of the view map.
 ## API overview
 
 TODO
+
+
+## Motivation
+
+The interesting thing about rich clients is that they combine some of the nastiest
+characteristics that programming has to offer:
+
+ - UI Toolkits like Swing, JavaFX or others are packed with mutable state. 
+ - The layout and configuration of widgets is usually very verbose (or requires
+   the time-consuming use of point-and-click designer tools).
+ - Every piece of logic is triggered on the basis of callbacks.
+ - Actions that change UI must do so by causing side effects. 
+ - To make a UI responsive you have to deal with multi-threading.
+ - Testing presentation logic is often very hard if it's mixed up
+   with code that accesses UI. This forces you to employ UI robots and to maintain 
+   brittle test scripts.
+
+To cut it short, there are quite some challenges ahead. This library explores practical
+answers to the following questions:
+
+ - Where does functional reactive programming help?
+ - Can we really escape callback hell?
+ - To what extent can side effects be avoided?
+ - How does a concise textual specification of UI look like?
+ 
 
 
 ## Ingredients of advanced GUI
