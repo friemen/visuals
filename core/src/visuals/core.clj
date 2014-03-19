@@ -10,13 +10,14 @@
 
 
 (defprotocol VisualComponent
-  (compname [vc])
-  (comptype [vc])
-  (parent [vc])
-  (set-error! [vc on])
-  (children [vc])
-  (eventsources [vc])
-  (signals [vc]))
+  "Represents a Button, Textfield, Window or other GUI component."
+  (compname [vc] "Returns the name of this visual component.")
+  (comptype [vc] "Return the type in terms of the forml metamodel.")
+  (parent [vc] "Returns the parent of this visual component.")
+  (set-error! [vc on] "Sets the visual component validation error display on or off.")
+  (children [vc] "Returns a vector of the visual child components.")
+  (eventsources [vc] "Returns a map of eventsources.")
+  (signals [vc] "Returns a map of signals."))
 
 
 
@@ -160,13 +161,24 @@
   (-> view-sig r/getv ::comp-map (cget comp-path) eventsources evtsrc-key))
 
 
+(defn emap
+  "Returns a map of paths to all signals and eventsources."
+  [comp-map]
+  (->> comp-map
+       (mapcat (fn [[comp-path vc]]
+                 (->> (signals vc)
+                      (concat (eventsources vc))
+                      (map (fn [[key react]]
+                             (vector (conj comp-path key) react))))))
+       (into {})))
+
 (defn all-events
   "Creates a new eventsource that merges all eventsources of all components of the view."
   [view-sig]
-  (let [comp-map (-> view-sig r/getv ::comp-map)]
-    (->> comp-map vals ; all components
-         (mapcat eventsources)
-         (map second) ; all eventsources
+  (let [comp-map (-> view-sig r/getv ::comp-map)
+        all-components (vals comp-map)
+        all-eventsources (->> all-components (mapcat eventsources) (map second))]
+    (->> all-eventsources
          (apply r/merge)
          (r/map (partial translate-event toolkit comp-map))))) ; new eventsource that merges all
 
@@ -220,7 +232,7 @@
   - ::domain-data
   - ::ui-state
   - ::comp-map
-  - ::other-views"
+  - ::all-views"
   [view-sig]
   (let [view (r/getv view-sig)
         vc (::vc view)
